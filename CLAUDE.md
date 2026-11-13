@@ -1,26 +1,28 @@
-# Lombok — Junction 2026 hackathon project
+# Solvo (repo: Lombok) — Junction 2026 hackathon project
 
 ## Goal
-A mobile-first money coach for S-Pankki customers that doesn't just show where the money went, it **cuts fixed costs**: the user photographs a bill, the AI extracts supplier, price, base fee, consumption and contract end date, shows how much they overpay, and simulates switching the contract with the user's approval. Challenge: S-Pankki "Personal Economic Trainer" (Junction 2026). Full plan, demo script, risks and schedule: `PLAN.md` (in Finnish; it is the source of truth for scope).
+Solvo, tagline "Fixed costs aren't fixed." A mobile-first money coach for S-Pankki customers that doesn't just show where the money went, it **cuts fixed costs**: it reads the e-invoices that already reach the bank, the AI extracts supplier, price, base fee, consumption and contract end date, shows how much they overpay, and simulates switching the contract with the user's approval. The user never has to photograph or upload anything. Challenge: S-Pankki "Personal Economic Trainer" (Junction 2026). Full plan, demo script, risks and schedule: `PLAN.md` (in Finnish, version 2; it is the source of truth for scope). The draft submission has been sent.
 
 Deadline: draft submission Fri 13.11. 23:59, FINAL Sun 15.11. 10:00, live peer review Sun 10:30–13:00. A working demo beats clean code.
 
 ## Demo in one line
-Three baskets (1 fixed and regular, 2 fixed and irregular, 3 everyday leakage) and one number, "how much can I safely spend this week?". Photograph an electricity bill → AI reads it → compare → overpay ~€240/yr → one-tap approved switch → safe-to-spend goes up. Coach chat answers questions like "how much did I spend on taxis?" from the real S-Pankki data.
+Three baskets (1 fixed and regular, 2 fixed and irregular, 3 everyday leakage) and one number, "how much can I safely spend this week?". Solvo has already read the e-invoices and identified each contract → open the electricity contract (AI-extracted fields) → compare → overpay ~€240/yr → one-tap approved switch → safe-to-spend goes up. Coach chat answers questions like "how much did I spend on taxis?" from the real S-Pankki data.
 
 ## Scope (from PLAN.md)
 - Electricity first. Phone and internet only if time remains.
 - Switching is simulated. The pitch explains how a real switch would work (new supplier cancels the old contract).
 - No insurance comparison (needs insurance-agent registration). Insurance appears only in the spend basket.
 - No native app: a web app that works well in a mobile browser.
-- Every extracted bill field is shown to the user and editable. Always keep a tested sample bill for the demo.
+- No bill photos and no uploads. S-Pankki has no open API in this challenge, so the demo uses synthetic Finvoice e-invoices linked to the dataset's Utilities payments (in production they would come from the bank's real e-invoice stream).
+- Every extracted e-invoice field is shown to the user and editable. Pre-test the demo e-invoices.
 - The user approves every switch; the AI never acts alone.
 - Competition rules: all code written at the event, MIT licence, synthetic or challenge data only, no existing company.
 
 ## Stack
 - Next.js (App Router, TypeScript), Tailwind, shadcn/ui. Mobile-first layout.
-- Gemini API for bill reading (image → structured fields) and the coach chat. Key in `.env.local`.
+- Gemini API for reading e-invoices (Finvoice → structured fields) and the coach chat. Key in `.env.local`.
 - No auth: hardcoded demo customer. No database planned: 1–3 demo customers preprocessed from the S-Pankki data into static JSON under the app. Add Supabase only if asked.
+- Synthetic Finvoice e-invoices for the demo customer(s), tied to their Utilities rows.
 - Electricity spot price: a free API (porssisahko.net or ENTSO-E). Supplier prices: a hand-maintained table first, Context.dev later (optional bonus). ElevenLabs voice is an optional wow-factor.
 - Deployed on Vercel from `main`
 
@@ -46,7 +48,7 @@ Cloned from https://github.com/hackjunction/Junction-2026-S-pankki into `data/s-
 - Topias: validation and users (10–15 interviews or bills from other teams, real savings numbers for the pitch, Junction forms).
 - Claude: code, data processing and text drafts.
 
-## Open questions (team to decide)
-1. Product name (working name: Lombok).
-2. Demo persona.
+## Open questions (team to decide; product name is decided: Solvo)
+1. Demo persona.
+2. Peer-review hook (decide Saturday, e.g. pick a customer from the data that looks like the visitor and show their savings).
 3. Saturday wow-factor: voice (ElevenLabs) or real supplier prices (Context.dev).
