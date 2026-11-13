@@ -1,0 +1,30 @@
+[
+  {
+    "id": "CUST01787",
+    "age": 34,
+    "postalCode": "02130",
+    "transactions": 1011,
+    "basketYear": {
+      "1": 13662.93,
+      "2": 8960.47,
+      "3": 25155.36
+    },
+    "utilitiesYear": 2707.75,
+    "restaurantsYear": 5984.38,
+    "salaryYear": 48334.44
+  },
+  {
+    "id": "CUST01590",
+    "age": 36,
+    "postalCode": "02730",
+    "transactions": 756,
+    "basketYear": {
+      "1": 19424.79,
+      "2": 10267.82,
+      "3": 19332.52
+    },
+    "utilitiesYear": 2342.94,
+    "restaurantsYear": 4517.08,
+    "salaryYear": 47104.08
+  }
+]
