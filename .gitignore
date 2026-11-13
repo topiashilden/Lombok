@@ -15,3 +15,10 @@ out/
 # misc
 .DS_Store
 *.log
+
+# next.js / typescript extras
+.pnp
+.pnp.*
+*.tsbuildinfo
+next-env.d.ts
+*.pem
