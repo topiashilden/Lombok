@@ -3,6 +3,9 @@
 .env.local
 .env.*.local
 
+# challenge datasets (cloned, not committed: 346 MB LFS file, own licence)
+data/s-pankki/
+
 # dependencies and build output
 node_modules/
 .next/
