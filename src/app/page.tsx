@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { safeToSpend, topCategories, unknownBills } from "@/lib/coach";
 import { BASKET_LABELS, MAIN_CUSTOMER, type Basket } from "@/lib/demo";
@@ -19,8 +20,9 @@ export default function Home() {
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-4 px-4 py-6">
       <header className="flex items-baseline justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Solvo</h1>
-          <p className="text-sm text-muted-foreground">Fixed costs aren&apos;t fixed.</p>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/solvo-logo.png" alt="Solvo" className="h-7 w-auto" />
+          <p className="mt-1 text-sm text-muted-foreground">Fixed costs aren&apos;t fixed.</p>
         </div>
         <p className="text-right text-xs text-muted-foreground">
           Age {c.age} · {c.postalCode}
@@ -91,6 +93,12 @@ export default function Home() {
           Your bank sees the amounts, but {Math.round(bills.withoutMerchant * 100)}% of these payments have no merchant
           or contract attached. Fixed costs aren&apos;t fixed: Solvo reads your e-invoices to find out what you&apos;re
           paying for, and whether you&apos;re overpaying.
+          <Link
+            href="/bills"
+            className="mt-3 flex h-10 items-center justify-center rounded-lg bg-emerald-800 font-medium text-white hover:bg-emerald-900"
+          >
+            See what Solvo found
+          </Link>
         </CardContent>
       </Card>
 
