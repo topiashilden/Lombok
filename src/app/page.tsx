@@ -1,14 +1,15 @@
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { safeToSpend, topCategories, unknownBills } from "@/lib/coach";
-import { BASKET_LABELS, MAIN_CUSTOMER, type Basket } from "@/lib/demo";
+import { BASKET_LABELS, type Basket } from "@/lib/demo";
+import { getSource } from "@/lib/source";
 
 const eur = new Intl.NumberFormat("fi-FI", { style: "currency", currency: "EUR", maximumFractionDigits: 0 });
 const dateFmt = new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
 const fmtDate = (iso: string) => dateFmt.format(new Date(`${iso}T00:00:00Z`));
 
 export default function Home() {
-  const c = MAIN_CUSTOMER;
+  const { customer: c, local } = getSource();
   const s = safeToSpend(c);
   const bills = unknownBills(c);
   const baskets = [1, 2, 3] as Basket[];
@@ -18,6 +19,11 @@ export default function Home() {
 
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-4 px-4 py-6">
+      {local && (
+        <p className="rounded-md bg-red-950 px-3 py-2 text-center text-xs font-medium text-red-50">
+          My Nordea data, local only. Do not share or record this screen.
+        </p>
+      )}
       <header className="flex items-baseline justify-between">
         <div>
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -25,8 +31,12 @@ export default function Home() {
           <p className="mt-1 text-sm text-muted-foreground">Fixed costs aren&apos;t fixed.</p>
         </div>
         <p className="text-right text-xs text-muted-foreground">
-          Age {c.age} · {c.postalCode}
-          <br />
+          {c.age > 0 && (
+            <>
+              Age {c.age} · {c.postalCode}
+              <br />
+            </>
+          )}
           Today {fmtDate(c.asOf)}
         </p>
       </header>
