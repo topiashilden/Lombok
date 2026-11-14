@@ -1,6 +1,8 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
+import { resetCalendar } from "@/lib/calendar-store";
+import { resetOnboarding } from "@/lib/onboarding-store";
 
 // What the user has approved in this browser: contract switches and a monthly fund savings plan.
 // The demo has no backend, so both live in localStorage: approve a switch in Bills and the
@@ -127,6 +129,8 @@ export function resetDemo() {
   switchStore.set(null);
   planStore.set(null);
   billStore.set(null);
+  resetOnboarding();
+  resetCalendar();
 }
 
 export const WEEKS_PER_YEAR = 52;
