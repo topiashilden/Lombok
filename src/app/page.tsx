@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, MessageCircle, ReceiptText } from "lucide-react";
 import { LiveWeeklyEuro, ResetDemoButton, SwitchBoostNote } from "@/components/live-budget";
+import { OnboardingGate, PlanCard } from "@/components/onboarding-home";
 import { OverdueBillCard } from "@/components/overdue-bill";
 import { Chip, Group, IconTile, Logo, PAGE, Row, Slab, eur, primaryButton } from "@/components/solvo/ui";
 import { safeToSpend, topCategories, unknownBills } from "@/lib/coach";
@@ -25,6 +26,7 @@ export default function Home() {
 
   return (
     <main className={PAGE}>
+      <OnboardingGate />
       {local && (
         <p className="mb-2 rounded-xl bg-[#5a1a12] px-3 py-2 text-center text-[12px] font-medium text-white">
           My Nordea data, local only. Do not share or record this screen.
@@ -79,6 +81,8 @@ export default function Home() {
       </Slab>
 
       <OverdueBillCard asOf={c.asOf} />
+
+      <PlanCard />
 
       {/* The bank's blind spot, and Solvo's hook */}
       <section className="mt-4 rounded-[24px] bg-card p-5 shadow-[0_1px_3px_rgba(15,42,31,0.06)]">

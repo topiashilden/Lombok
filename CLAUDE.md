@@ -52,6 +52,12 @@ Cloned from https://github.com/hackjunction/Junction-2026-S-pankki into `data/s-
 - Never import `src/lib/demo.ts` from a client component (it is `server-only`; the build fails if you do). Compute on the server and pass small props.
 - Installable: `src/app/manifest.ts`, icons in `public/icons/` and `src/app/apple-icon.png`. iPhone installs via Share, Add to Home Screen only (no prompt). The icon is a placeholder.
 
+## Onboarding (first run) and investing rules
+- `/onboarding` (`src/app/onboarding/`) runs once for a new user (`OnboardingGate` on Home redirects; "Skip for now" is remembered). Steps: what we think of you, your month, savings goals, investing, your plan. Output: weekly spending budget, monthly transfer to a savings account, monthly room for investing. The approved plan lives in localStorage (`src/lib/onboarding-store.ts`, cleared by Reset demo) and replaces the default EUR 200/month savings goal in Home's weekly numbers.
+- `src/lib/profile.ts` guesses student, worker, part-time, between jobs or retired from salary pattern and Kela's study grant (bank code "Opintotuki"; only real Nordea data has it, synthetic customers all come out as workers). `src/lib/plan.ts` is the allocation maths (rules of thumb at the top, every number traceable). Both are pure; the server page sends only the profile and monthly numbers to the browser, never transactions.
+- Investing: Solvo never recommends a product. It sizes a budget ("room to invest": half of what is left after bills, buffer and goals, zero before a starter buffer or while between jobs) and `src/lib/fund-match.ts` screens an ILLUSTRATIVE catalogue by the person's stated safety, horizon and "environmentally friendly" wish, showing only standard facts (1-7 risk class, EU SFDR label, fee). No ranking, no "best". Do not add real S-Pankki fund names or risk classes unless they come from S-Pankki; do not add wording like "we recommend".
+- ASP: rules changed in June 2026 and sources disagree on eligibility, so the app states no age limits or saving periods, only "banks have typically wanted about 10% of the purchase price, check current terms".
+
 ## Rules
 - Keep `main` deployable. Small commits, clear messages.
 - Work on short-lived branches, one feature each.

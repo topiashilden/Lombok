@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { onboardingWeeklyDelta, useOnboarding } from "@/lib/onboarding-store";
 import { resetDemo, useBillActions, useSavingsPlan, useSwitches, weeklyBoost } from "@/lib/switches";
 
 // Small client islands for the server-rendered home page: they add the effect of approved switches
@@ -10,7 +11,8 @@ const eur = new Intl.NumberFormat("fi-FI", { style: "currency", currency: "EUR",
 
 /** A weekly amount (remaining or budget) plus what approved switches free up each week. */
 export function LiveWeeklyEuro({ base, signed = false }: { base: number; signed?: boolean }) {
-  const value = base + weeklyBoost(useSwitches(), useSavingsPlan());
+  // Approved switches add money; the onboarding plan replaces the default savings goal the base numbers assume.
+  const value = base + weeklyBoost(useSwitches(), useSavingsPlan()) + onboardingWeeklyDelta(useOnboarding());
   return <>{signed && value < 0 ? `−${eur.format(-value)}` : eur.format(value)}</>;
 }
 
@@ -43,7 +45,8 @@ export function ResetDemoButton({ className }: { className?: string }) {
   const switches = useSwitches();
   const plan = useSavingsPlan();
   const bills = useBillActions();
-  if (!Object.keys(switches).length && !plan && !Object.keys(bills).length) return null;
+  const onboarding = useOnboarding();
+  if (!Object.keys(switches).length && !plan && !Object.keys(bills).length && !onboarding.completedAt && !onboarding.skipped) return null;
   return (
     <button type="button" className={className} onClick={resetDemo}>
       Reset demo
