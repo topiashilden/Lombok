@@ -1,18 +1,49 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { addTransitionType, startTransition, useEffect, useMemo, useState } from "react";
+import { SubScreen } from "@/components/solvo/screen";
 import { ArrowRight, Cable, Check, FileText, Smartphone, Sparkles, Zap } from "lucide-react";
-import { BackButton, BackLink, Chip, Group, IconTile, PAGE, PageTitle, TopBar, eur, eur2, primaryButton } from "@/components/solvo/ui";
+import {
+  BackButton,
+  Chip,
+  Group,
+  IconTile,
+  PAGE,
+  PageTitle,
+  TopBar,
+  eur,
+  eur2,
+  primaryButton,
+} from "@/components/solvo/ui";
 import { ApproveSheet, DoneView, EditField, OfferOption, ReadFields, SavingSlab, StickyAction } from "./switch-ui";
 import type { Reading } from "@/lib/einvoice";
-import { compare, OFFERS_UPDATED, type ContractTerms } from "@/lib/offers";
-import { compareTelecom } from "@/lib/telecom-offers";
-import { approveSwitch, useSavingsPlan, useSwitches, weeklyBoost, type BillKey, type SwitchRecord } from "@/lib/switches";
+import { compare, type ContractTerms } from "@/lib/offers";
+import { SAVED_ELECTRICITY_DB, domainOf, type MarketDb } from "@/lib/market";
+import { compareTelecom, telecomTermsFrom } from "@/lib/telecom-offers";
+import {
+  approveSwitch,
+  cacheReading,
+  readCachedReadings,
+  useCachedReadings,
+  useSavingsPlan,
+  useSwitches,
+  weeklyBoost,
+  type BillKey,
+  type SwitchRecord,
+} from "@/lib/switches";
+import { MarketAgentCard } from "./market-agent-card";
 import { PhotoUpload } from "./photo-upload";
 import { TelecomDetail } from "./telecom-detail";
 
 type InvoiceMeta = { id: string; payment: { date: string; amount: number } | null }; // null = read from a photo
-type Loaded = { reading: Reading; source: "gemini" | "saved"; model?: string; ms: number; cached?: boolean; fromPhoto?: boolean };
+type Loaded = {
+  reading: Reading;
+  source: "gemini" | "saved";
+  model?: string;
+  ms: number;
+  cached?: boolean;
+  fromPhoto?: boolean;
+};
 
 const dateFmt = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
 const fmtDate = (iso: string | null) => (iso ? dateFmt.format(new Date(`${iso}T00:00:00Z`)) : "–");
@@ -41,22 +72,42 @@ function termsFrom(r: Reading): ContractTerms {
   };
 }
 
-export function BillsClient(props: {
-  asOf: string;
-  invoices: InvoiceMeta[];
-  weeklyBudget: number;
-  remaining: number;
-}) {
-  const [loaded, setLoaded] = useState<Record<string, Loaded>>({});
-  const [open, setOpen] = useState<string | null>(null);
+export function BillsClient(props: { asOf: string; invoices: InvoiceMeta[]; weeklyBudget: number; remaining: number }) {
+  const [fetched, setLoaded] = useState<Record<string, Loaded>>({});
+  const stored = useCachedReadings() as Record<string, Loaded>;
+  // Readings from this visit win (they carry the reading time); earlier ones come from the device cache.
+  const loaded = useMemo(() => {
+    const fromCache = Object.fromEntries(Object.entries(stored).map(([id, l]) => [id, { ...l, cached: true }]));
+    return { ...fromCache, ...fetched };
+  }, [stored, fetched]);
+  const [open, setOpenState] = useState<string | null>(null);
+  // Opening a contract slides it in like a new screen; going back slides it out.
+  const setOpen = (id: string | null) =>
+    startTransition(() => {
+      addTransitionType(id ? "nav-forward" : "nav-back");
+      setOpenState(id);
+    });
   const [photos, setPhotos] = useState<InvoiceMeta[]>([]);
   const switches = useSwitches();
 
+  // Each e-invoice is read by Gemini once per device and kept in localStorage; later visits are instant and make
+  // no Gemini call. Profile has "Read e-invoices again" for the demo. Saved fallback readings aren't cached, so
+  // Gemini gets another try next time.
   useEffect(() => {
+    const cached = readCachedReadings();
     for (const inv of props.invoices) {
-      fetch("/api/read-invoice", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id: inv.id }) })
+      if (cached[inv.id]) continue;
+      fetch("/api/read-invoice", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ id: inv.id }),
+      })
         .then((r) => r.json())
-        .then((d: Loaded) => setLoaded((prev) => ({ ...prev, [inv.id]: d })))
+        .then((d: Loaded) => {
+          if (!d.reading) return;
+          if (d.source === "gemini") cacheReading(inv.id, d);
+          setLoaded((prev) => ({ ...prev, [inv.id]: d }));
+        })
         .catch(() => {});
     }
   }, [props.invoices]);
@@ -73,48 +124,60 @@ export function BillsClient(props: {
 
   return (
     <main className={PAGE}>
-      <TopBar back={open ? <BackButton onClick={() => setOpen(null)} label="Bills" /> : <BackLink href="/" label="Home" />} />
+      <TopBar back={open ? <BackButton onClick={() => setOpen(null)} label="Bills" /> : undefined} />
 
-      {open && openInvoice?.reading.kind === "telecom" ? (
-        <TelecomDetail
-          reading={openInvoice.reading}
-          badge={<SourceBadge l={openInvoice} />}
-          weeklyBudget={props.weeklyBudget}
-          remaining={props.remaining}
-          asOf={props.asOf}
-        />
-      ) : open && openInvoice ? (
-        <ElectricityDetail
-          loaded={openInvoice}
-          weeklyBudget={props.weeklyBudget}
-          remaining={props.remaining}
-          asOf={props.asOf}
-        />
-      ) : (
-        <>
-          <PageTitle title="Your bills">
-            Solvo read the e-invoices that reached your bank this month. Nothing to photograph or upload.
-          </PageTitle>
+      <SubScreen id={open && openInvoice ? open : "list"}>
+        <div className="flex flex-1 flex-col">
+          {open && openInvoice?.reading.kind === "telecom" ? (
+            <TelecomDetail
+              reading={openInvoice.reading}
+              badge={<SourceBadge l={openInvoice} />}
+              weeklyBudget={props.weeklyBudget}
+              remaining={props.remaining}
+              asOf={props.asOf}
+            />
+          ) : open && openInvoice ? (
+            <ElectricityDetail
+              loaded={openInvoice}
+              weeklyBudget={props.weeklyBudget}
+              remaining={props.remaining}
+              asOf={props.asOf}
+            />
+          ) : (
+            <>
+              <PageTitle title="Your bills">
+                Solvo read the e-invoices that reached your bank this month. Nothing to photograph or upload.
+              </PageTitle>
 
-          {actionable.map((inv) => (
-            <FeaturedInvoice key={inv.id} meta={inv} loaded={loaded[inv.id]!} onOpen={() => setOpen(inv.id)} />
-          ))}
+              {actionable.map((inv) => (
+                <FeaturedInvoice key={inv.id} meta={inv} loaded={loaded[inv.id]!} onOpen={() => setOpen(inv.id)} />
+              ))}
 
-          <Group title={actionable.length ? "Other bills" : "This month"} className={actionable.length ? "mt-7" : "mt-0"}>
-            {others.map((inv) => (
-              <InvoiceRow key={inv.id} meta={inv} loaded={loaded[inv.id]} switched={switchedFor(loaded[inv.id], switches)} />
-            ))}
-          </Group>
+              <Group
+                title={actionable.length ? "Other bills" : "This month"}
+                className={actionable.length ? "mt-7" : "mt-0"}
+              >
+                {others.map((inv) => (
+                  <InvoiceRow
+                    key={inv.id}
+                    meta={inv}
+                    loaded={loaded[inv.id]}
+                    switched={switchedFor(loaded[inv.id], switches)}
+                  />
+                ))}
+              </Group>
 
-          <PhotoUpload
-            onRead={(d) => {
-              const id = `photo-${photos.length + 1}`;
-              setLoaded((prev) => ({ ...prev, [id]: { ...d, source: "gemini", fromPhoto: true } }));
-              setPhotos((prev) => [...prev, { id, payment: null }]);
-            }}
-          />
-        </>
-      )}
+              <PhotoUpload
+                onRead={(d) => {
+                  const id = `photo-${photos.length + 1}`;
+                  setLoaded((prev) => ({ ...prev, [id]: { ...d, source: "gemini", fromPhoto: true } }));
+                  setPhotos((prev) => [...prev, { id, payment: null }]);
+                }}
+              />
+            </>
+          )}
+        </div>
+      </SubScreen>
     </main>
   );
 }
@@ -154,11 +217,7 @@ function FeaturedInvoice({ meta, loaded, onOpen }: { meta: InvoiceMeta; loaded: 
   const isElectricity = r.kind === "electricity_energy";
   const saving = isElectricity
     ? compare(termsFrom(r)).recommended.saving
-    : compareTelecom({
-        lines: r.mobileLines ?? 1,
-        perLine: r.pricePerLine ?? r.monthlyCost,
-        homeInternet: r.homeInternetMonthly ?? 0,
-      }).recommended.saving;
+    : compareTelecom(telecomTermsFrom(r)).recommended.saving;
   const Icon = KIND_ICON[r.kind];
   return (
     <section className="rounded-[24px] bg-card p-5 shadow-[0_1px_3px_rgba(15,42,31,0.06)] ring-1 ring-warn/25">
@@ -209,7 +268,9 @@ function InvoiceRow({ meta, loaded, switched }: { meta: InvoiceMeta; loaded?: Lo
         <div className="flex-1">
           <p className="text-[15px] font-medium text-muted-foreground">Reading e-invoice…</p>
           <p className="num mt-0.5 text-[13px] text-muted-foreground">
-            {meta.payment ? `Payment ${eur2.format(-meta.payment.amount)} on ${fmtDate(meta.payment.date)}` : "Your photo"}
+            {meta.payment
+              ? `Payment ${eur2.format(-meta.payment.amount)} on ${fmtDate(meta.payment.date)}`
+              : "Your photo"}
           </p>
           <div className="shimmer mt-2.5 h-2.5 w-3/4 rounded-full" />
         </div>
@@ -263,7 +324,8 @@ function ElectricityDetail(props: { loaded: Loaded; weeklyBudget: number; remain
   const set = (k: keyof ContractTerms) => (v: number | null) =>
     setTerms((t) => ({ ...t, [k]: v ?? (k === "centsAfterEnd" || k === "monthlyFeeAfterEnd" ? null : 0) }));
 
-  const cmp = useMemo(() => compare(terms), [terms]);
+  const [db, setDb] = useState<MarketDb>(SAVED_ELECTRICITY_DB);
+  const cmp = useMemo(() => compare(terms, db), [terms, db]);
   const [chosenId, setChosenId] = useState<string | null>(null);
   const chosen = cmp.offers.find((o) => o.id === chosenId) ?? cmp.recommended;
   const [stage, setStage] = useState<"compare" | "confirm" | "done">("compare");
@@ -317,14 +379,24 @@ function ElectricityDetail(props: { loaded: Loaded; weeklyBudget: number; remain
         <EditField label="Yearly use" value={terms.annualKwh} unit="kWh" step="100" onChange={set("annualKwh")} />
         <EditField label="Price now" value={terms.centsPerKwh} unit="c/kWh" onChange={set("centsPerKwh")} />
         <EditField label="Base fee now" value={terms.monthlyFee} unit="€/mo" onChange={set("monthlyFee")} />
-        <EditField label={`Price after ${fmtDate(r.contractEndDate)}`} value={terms.centsAfterEnd} unit="c/kWh" onChange={set("centsAfterEnd")} />
-        <EditField label="Base fee after" value={terms.monthlyFeeAfterEnd} unit="€/mo" onChange={set("monthlyFeeAfterEnd")} />
+        <EditField
+          label={`Price after ${fmtDate(r.contractEndDate)}`}
+          value={terms.centsAfterEnd}
+          unit="c/kWh"
+          onChange={set("centsAfterEnd")}
+        />
+        <EditField
+          label="Base fee after"
+          value={terms.monthlyFeeAfterEnd}
+          unit="€/mo"
+          onChange={set("monthlyFeeAfterEnd")}
+        />
       </ReadFields>
 
       <Group
         title="Your options for a year"
         aside={`${terms.annualKwh.toLocaleString("fi-FI")} kWh`}
-        footer={`Demo offer table, updated ${fmtDate(OFFERS_UPDATED)}. Providers are fictional. Today's price would cost ${eur.format(cmp.current)} a year.`}
+        footer={`Real public prices found by Solvo's market agent, energy only. Your current price would cost ${eur.format(cmp.current)} a year.`}
       >
         <div role="radiogroup" aria-label="Electricity offers">
           {cmp.offers.map((o) => (
@@ -336,10 +408,15 @@ function ElectricityDetail(props: { loaded: Loaded; weeklyBudget: number; remain
               yearly={o.yearly}
               detail={
                 <>
-                  {o.pricing === "spot" ? "Spot, about " : ""}
-                  {o.centsPerKwh.toFixed(2)} c/kWh + {o.monthlyFee.toFixed(2)} €/mo
+                  {o.pricing === "spot"
+                    ? `Spot, about ${o.centsPerKwh.toFixed(2)} c/kWh (margin ${o.marginCents?.toFixed(2)})`
+                    : `${o.centsPerKwh.toFixed(2)} c/kWh`}
+                  {` + ${o.monthlyFee.toFixed(2)} €/mo`}
                   {o.termMonths ? `, fixed ${o.termMonths} months` : ""}
                   {o.note ? `. ${o.note}` : ""}
+                  <span className="mt-0.5 block">
+                    Source: {domainOf(o.sourceUrl)}, checked {fmtDate(o.checkedAt)}
+                  </span>
                 </>
               }
               pick={o.id === cmp.recommended.id ? "Coach's pick: a fixed price is easier to budget" : undefined}
@@ -347,6 +424,20 @@ function ElectricityDetail(props: { loaded: Loaded; weeklyBudget: number; remain
           ))}
         </div>
       </Group>
+
+      <MarketAgentCard
+        db={db}
+        onResult={setDb}
+        forYou={
+          <>
+            For you it only picks the best of your group,{" "}
+            <span className="font-medium text-foreground">
+              {cmp.segment.label.charAt(0).toLowerCase() + cmp.segment.label.slice(1)}
+            </span>
+            , and prices them at your own {terms.annualKwh.toLocaleString("fi-FI")} kWh.
+          </>
+        }
+      />
 
       <StickyAction onClick={() => setStage("confirm")}>Switch to {chosen.supplier}</StickyAction>
 

@@ -2,7 +2,7 @@
 
 import { ArrowUp, ArrowUpRight, ReceiptText, Sparkles } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { BackLink, Group, TopBar, eur } from "@/components/solvo/ui";
+import { Group, TopBar, eur } from "@/components/solvo/ui";
 import type { SpendingResult } from "@/lib/spending";
 
 type Msg = { role: "user" | "coach"; text: string; checks?: SpendingResult[]; source?: "gemini" | "offline"; ms?: number };
@@ -62,7 +62,7 @@ export function CoachClient() {
   return (
     <main className="flex min-h-dvh flex-1 flex-col">
       <header className="sticky top-0 z-10 bg-background/85 px-4 pt-[calc(0.75rem+env(safe-area-inset-top))] backdrop-blur-xl">
-        <TopBar back={<BackLink href="/" label="Home" />} />
+        <TopBar />
       </header>
 
       <div className="flex flex-1 flex-col gap-3 px-4 pt-3 pb-4">
@@ -160,7 +160,7 @@ export function CoachClient() {
           e.preventDefault();
           void ask(input);
         }}
-        className="sticky bottom-0 z-10 bg-background/85 px-4 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-xl"
+        className="sticky bottom-0 z-10 bg-background/85 px-4 pt-2 pb-[calc(0.75rem+var(--tabbar-h))] backdrop-blur-xl"
       >
         <div className="flex items-center gap-1.5 rounded-full bg-card p-1.5 pl-4 shadow-[0_1px_3px_rgba(15,42,31,0.08),0_8px_24px_-12px_rgba(15,42,31,0.18)] focus-within:ring-2 focus-within:ring-primary/30">
           <input

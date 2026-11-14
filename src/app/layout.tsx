@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Bricolage_Grotesque, Geist_Mono, Instrument_Sans } from "next/font/google";
 import "./globals.css";
+import { PullToRefresh } from "@/components/pull-to-refresh";
+import { TabBar } from "@/components/tab-bar";
 
 // Display: Bricolage Grotesque for the big money figures and page titles. Body: Instrument Sans.
 const display = Bricolage_Grotesque({
@@ -49,6 +51,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         {/* Phone-width column. On a laptop it sits centred so judges still see the phone layout. */}
         <div className="mx-auto flex min-h-dvh w-full max-w-[430px] flex-col bg-background md:shadow-2xl md:shadow-black/10">
           {children}
+          <TabBar />
+          <PullToRefresh />
         </div>
       </body>
     </html>

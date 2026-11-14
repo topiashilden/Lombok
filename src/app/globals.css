@@ -55,6 +55,8 @@
 }
 
 :root {
+  /* Space the bottom tab bar takes, safe area included. Pages and fixed action bars pad by this. */
+  --tabbar-h: calc(3.5rem + env(safe-area-inset-bottom));
   /* Solvo palette: cool frost paper, deep spruce ink, the logo's money green. */
   --background: #f2f4f1; /* frost: page */
   --foreground: #0f2a1f; /* spruce ink: text */
@@ -246,5 +248,110 @@
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+/* No tab bar (full-screen pages), or a text field has focus and the keyboard is up: only the safe area is left. */
+:root:not(:has(#tabbar)),
+:root:has(:is(input:not([type="file"], [type="range"], [type="checkbox"], [type="radio"]), textarea):focus) {
+  --tabbar-h: env(safe-area-inset-bottom);
+}
+:root:has(:is(input:not([type="file"], [type="range"], [type="checkbox"], [type="radio"]), textarea):focus) #tabbar {
+  display: none;
+}
+
+/* ---------- View transitions (src/components/solvo/screen.tsx) ---------- */
+:root {
+  --vt-exit: 140ms;
+  --vt-enter: 240ms;
+  --vt-move: 380ms;
+  --vt-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@keyframes vt-fade {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes vt-slide {
+  from {
+    translate: var(--vt-offset) 0;
+  }
+}
+@keyframes vt-lift {
+  from {
+    translate: 0 10px;
+  }
+}
+
+/* The root swaps instantly; only the page itself animates, so the tab bar never flickers. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+}
+::view-transition {
+  pointer-events: none;
+}
+
+/* Tabs: fade out, then fade in with a small lift. */
+::view-transition-old(.screen-out) {
+  animation: var(--vt-exit) ease-in both vt-fade reverse;
+}
+::view-transition-new(.screen-in) {
+  animation:
+    var(--vt-enter) var(--vt-ease) var(--vt-exit) both vt-fade,
+    var(--vt-move) var(--vt-ease) var(--vt-exit) both vt-lift;
+}
+
+/* Forward: the old screen drifts left, the new one slides in from the right. Back mirrors it. */
+::view-transition-old(.nav-forward) {
+  --vt-offset: -48px;
+  animation:
+    var(--vt-exit) ease-in both vt-fade reverse,
+    var(--vt-move) var(--vt-ease) both vt-slide reverse;
+}
+::view-transition-new(.nav-forward) {
+  --vt-offset: 64px;
+  animation:
+    var(--vt-enter) ease-out var(--vt-exit) both vt-fade,
+    var(--vt-move) var(--vt-ease) both vt-slide;
+}
+::view-transition-old(.nav-back) {
+  --vt-offset: 64px;
+  animation:
+    var(--vt-exit) ease-in both vt-fade reverse,
+    var(--vt-move) var(--vt-ease) both vt-slide reverse;
+}
+::view-transition-new(.nav-back) {
+  --vt-offset: -48px;
+  animation:
+    var(--vt-enter) ease-out var(--vt-exit) both vt-fade,
+    var(--vt-move) var(--vt-ease) both vt-slide;
+}
+
+/* The tab bar stays put, and its active pill glides to the new tab. */
+#tabbar {
+  view-transition-name: tabbar;
+}
+::view-transition-group(tabbar) {
+  animation: none;
+  z-index: 50;
+}
+::view-transition-old(tabbar) {
+  display: none;
+}
+::view-transition-new(tabbar) {
+  animation: none;
+}
+::view-transition-group(.tab-pill) {
+  animation-duration: var(--vt-move);
+  animation-timing-function: var(--vt-ease);
+  z-index: 60;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
   }
 }

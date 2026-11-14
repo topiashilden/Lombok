@@ -136,10 +136,10 @@ export function OfferOption(props: {
   );
 }
 
-/** The main action, pinned above the home bar. Pages using it need bottom padding (pb-24). */
+/** The main action, pinned above the tab bar. Pages using it need bottom padding (pb-24). */
 export function StickyAction({ onClick, children }: { onClick: () => void; children: ReactNode }) {
   return (
-    <div className="fixed inset-x-0 bottom-0 z-20 mx-auto w-full max-w-[430px] bg-gradient-to-t from-background via-background/95 to-background/0 px-4 pt-6 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+    <div className="fixed inset-x-0 bottom-0 z-20 mx-auto w-full max-w-[430px] bg-gradient-to-t from-background via-background/95 to-background/0 px-4 pt-6 pb-[calc(0.75rem+var(--tabbar-h))]">
       <button type="button" className={primaryButton} onClick={onClick}>
         {children}
       </button>

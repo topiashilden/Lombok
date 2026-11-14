@@ -50,7 +50,7 @@ Cloned from https://github.com/hackjunction/Junction-2026-S-pankki into `data/s-
 - Chat: message list scrolls, input stays attached to the visible viewport above the keyboard. Test on a real iPhone; the Simulator is not available (no full Xcode on this Mac).
 - Audio (ElevenLabs) must start from a tap on iOS. No haptics on iOS Safari.
 - Never import `src/lib/demo.ts` from a client component (it is `server-only`; the build fails if you do). Compute on the server and pass small props.
-- Installable: `src/app/manifest.ts`, icons in `public/icons/` and `src/app/apple-icon.png`. iPhone installs via Share, Add to Home Screen only (no prompt). The icon is a placeholder.
+- Installable: `src/app/manifest.ts`, icons in `public/icons/` and `src/app/apple-icon.png`. iPhone installs via Share, Add to Home Screen only (no prompt). Icon: white S from the logo on the slab green (#0c3524).
 
 ## Onboarding (first run), calendar and investing rules
 - `/onboarding` runs once for a new user (`OnboardingGate` on Home redirects; "Skip for now" is remembered). Four steps: 1 your profile (accept it, or fix it with the small pencils: situation, income and payday, fixed bills), 2 savings goals, 3 investing, 4 your plan. Output: weekly spending budget, monthly transfer to a savings account, monthly room for investing, and what Solvo would move on payday (bills kept safe, irregular pot, savings, investing, spending account). The approved plan lives in localStorage (`src/lib/onboarding-store.ts`, cleared by Reset demo) and replaces the default EUR 200/month savings goal in Home's weekly numbers; the person's income and bill corrections flow through as `monthlyAdjust`.

@@ -8,7 +8,7 @@ const BASE = `http://127.0.0.1:${PORT}`;
 
 const server = spawn(process.execPath, ["node_modules/next/dist/bin/next", "start", "-p", PORT, "-H", "127.0.0.1"], {
   stdio: ["ignore", "pipe", "pipe"],
-  env: { ...process.env, GEMINI_API_KEY: "" },
+  env: { ...process.env, GEMINI_API_KEY: "", EXA_API_KEY: "", EXA_KEY: "" },
 });
 let serverLog = "";
 server.stdout.on("data", (d) => (serverLog += d));
@@ -65,6 +65,14 @@ try {
   await check("POST /api/read-invoice (saved reading)", async () => {
     const data = await postJson("/api/read-invoice", { id: "electricity" });
     if (!data.reading) throw new Error("no reading in response");
+  });
+  await check("POST /api/market-agent (saved run without keys)", async () => {
+    for (const agent of ["electricity", "telecom"]) {
+      const res = await fetch(BASE + "/api/market-agent", { method: "POST", body: JSON.stringify({ agent }) });
+      if (res.status !== 200) throw new Error(`${agent}: status ${res.status}`);
+      const last = JSON.parse((await res.text()).trim().split("\n").pop());
+      if (last.type !== "result" || !last.db?.offers?.length) throw new Error(`${agent}: unexpected last event: ${JSON.stringify(last).slice(0, 200)}`);
+    }
   });
   await check("POST /api/coach (offline answer)", async () => {
     const data = await postJson("/api/coach", { messages: [{ role: "user", text: "How much did I spend on restaurants?" }] });

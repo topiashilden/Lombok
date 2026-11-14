@@ -68,11 +68,11 @@ export function OverdueBillCard({ asOf }: { asOf: string }) {
         })}
       </ol>
 
-      <Link href="/call" className={`${primaryButton} mt-4`}>
+      <Link href="/call" transitionTypes={["nav-forward"]} className={`${primaryButton} mt-4`}>
         <Phone className="size-[18px]" aria-hidden />
         Solvo is calling
       </Link>
-      <Link href="/call?skip=1" className={`${secondaryButton} mt-2`}>
+      <Link href="/call?skip=1" transitionTypes={["nav-forward"]} className={`${secondaryButton} mt-2`}>
         Pay now instead
       </Link>
     </section>

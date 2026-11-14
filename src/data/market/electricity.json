@@ -1,0 +1,272 @@
+{
+  "agent": "electricity",
+  "ranAt": "2026-11-14T12:20:00.000Z",
+  "mode": "seed",
+  "queries": [
+    "määräaikainen sähkösopimus hinta snt/kWh perusmaksu kuluttaja",
+    "pörssisähkö marginaali snt/kWh perusmaksu €/kk sähköyhtiö",
+    "halvin sähkösopimus vertailu hinnat"
+  ],
+  "pagesRead": 5,
+  "sources": [
+    {
+      "url": "https://sahkovertaaja.fi/maaraaikainen-sahkosopimus/",
+      "title": "Halvin kiinteä sähkösopimus: vertaile 25 yhtiötä (sahkovertaaja.fi)"
+    },
+    {
+      "url": "https://helppohinta.fi/sahko/sahkosopimus/maaraaikainen/",
+      "title": "Määräaikainen sähkösopimus (helppohinta.fi)"
+    },
+    {
+      "url": "https://www.sopimusvahti.fi/porssisahko",
+      "title": "Pörssisähkö 2026: marginaalit ja hintavertailu (sopimusvahti.fi)"
+    },
+    {
+      "url": "https://selectra.fi/sahkoyhtiot/oomi/porssisahko",
+      "title": "Oomi pörssisähkö: hinta ja marginaali (selectra.fi)"
+    },
+    {
+      "url": "https://selectra.fi/sahkoyhtiot/fortum/porssisahko",
+      "title": "Fortum pörssisähkö: hinta ja marginaali (selectra.fi)"
+    }
+  ],
+  "spotExpectedAvgCents": 7.5,
+  "offers": [
+    {
+      "id": "oomi-kiintea-24-kk",
+      "supplier": "Oomi",
+      "product": "Kiinteä 24 kk",
+      "pricing": "fixed",
+      "centsPerKwh": 9.89,
+      "monthlyFee": 5.9,
+      "termMonths": 24,
+      "conditions": "No base fee for the first 9 months",
+      "sourceUrl": "https://sahkovertaaja.fi/maaraaikainen-sahkosopimus/",
+      "sourceTitle": "Halvin kiinteä sähkösopimus: vertaile 25 yhtiötä (sahkovertaaja.fi)",
+      "checkedAt": "2026-11-13"
+    },
+    {
+      "id": "vaasan-sahko-kiintea-24-kk",
+      "supplier": "Vaasan Sähkö",
+      "product": "Kiinteä 24 kk",
+      "pricing": "fixed",
+      "centsPerKwh": 9.99,
+      "monthlyFee": 5.9,
+      "termMonths": 24,
+      "conditions": "No base fee for the first 12 months, new customers",
+      "sourceUrl": "https://sahkovertaaja.fi/maaraaikainen-sahkosopimus/",
+      "sourceTitle": "Halvin kiinteä sähkösopimus: vertaile 25 yhtiötä (sahkovertaaja.fi)",
+      "checkedAt": "2026-11-13"
+    },
+    {
+      "id": "helen-maaraaikainen-perussahko-24-kk",
+      "supplier": "Helen",
+      "product": "Määräaikainen Perussähkö 24 kk",
+      "pricing": "fixed",
+      "centsPerKwh": 9.99,
+      "monthlyFee": 5.99,
+      "termMonths": 24,
+      "conditions": "No base fee for the first 12 months, new customers",
+      "sourceUrl": "https://sahkovertaaja.fi/maaraaikainen-sahkosopimus/",
+      "sourceTitle": "Halvin kiinteä sähkösopimus: vertaile 25 yhtiötä (sahkovertaaja.fi)",
+      "checkedAt": "2026-11-13"
+    },
+    {
+      "id": "cheap-energy-maaraaikainen-36-kk",
+      "supplier": "Cheap Energy",
+      "product": "Määräaikainen 36 kk",
+      "pricing": "fixed",
+      "centsPerKwh": 10.19,
+      "monthlyFee": 4.65,
+      "termMonths": 36,
+      "conditions": "Can be ended after 24 months",
+      "sourceUrl": "https://sahkovertaaja.fi/maaraaikainen-sahkosopimus/",
+      "sourceTitle": "Halvin kiinteä sähkösopimus: vertaile 25 yhtiötä (sahkovertaaja.fi)",
+      "checkedAt": "2026-11-13"
+    },
+    {
+      "id": "turku-energia-louna-lahi-24-kk",
+      "supplier": "Turku Energia",
+      "product": "Louna Lähi 24 kk",
+      "pricing": "fixed",
+      "centsPerKwh": 10.25,
+      "monthlyFee": 4.5,
+      "termMonths": 24,
+      "conditions": null,
+      "sourceUrl": "https://sahkovertaaja.fi/maaraaikainen-sahkosopimus/",
+      "sourceTitle": "Halvin kiinteä sähkösopimus: vertaile 25 yhtiötä (sahkovertaaja.fi)",
+      "checkedAt": "2026-11-13"
+    },
+    {
+      "id": "hehku-kiintea-24-kk",
+      "supplier": "Hehku",
+      "product": "Kiinteä 24 kk",
+      "pricing": "fixed",
+      "centsPerKwh": 10.35,
+      "monthlyFee": 4.9,
+      "termMonths": 24,
+      "conditions": "No base fee for the first 6 months",
+      "sourceUrl": "https://sahkovertaaja.fi/maaraaikainen-sahkosopimus/",
+      "sourceTitle": "Halvin kiinteä sähkösopimus: vertaile 25 yhtiötä (sahkovertaaja.fi)",
+      "checkedAt": "2026-11-13"
+    },
+    {
+      "id": "fortum-takuu-24-kk",
+      "supplier": "Fortum",
+      "product": "Takuu 24 kk",
+      "pricing": "fixed",
+      "centsPerKwh": 10.39,
+      "monthlyFee": 5.99,
+      "termMonths": 24,
+      "conditions": null,
+      "sourceUrl": "https://sahkovertaaja.fi/maaraaikainen-sahkosopimus/",
+      "sourceTitle": "Halvin kiinteä sähkösopimus: vertaile 25 yhtiötä (sahkovertaaja.fi)",
+      "checkedAt": "2026-11-13"
+    },
+    {
+      "id": "pohjois-karjalan-sahko-optimi-takuu-24-kk",
+      "supplier": "Pohjois-Karjalan Sähkö",
+      "product": "Optimi Takuu 24 kk",
+      "pricing": "fixed",
+      "centsPerKwh": 10.5,
+      "monthlyFee": 4.56,
+      "termMonths": 24,
+      "conditions": "No base fee for the first 12 months",
+      "sourceUrl": "https://sahkovertaaja.fi/maaraaikainen-sahkosopimus/",
+      "sourceTitle": "Halvin kiinteä sähkösopimus: vertaile 25 yhtiötä (sahkovertaaja.fi)",
+      "checkedAt": "2026-11-13"
+    },
+    {
+      "id": "porvoon-energia-ilmastoviisas-24-kk-yleissahko",
+      "supplier": "Porvoon Energia",
+      "product": "Ilmastoviisas 24 kk Yleissähkö",
+      "pricing": "fixed",
+      "centsPerKwh": 10.6,
+      "monthlyFee": 3.9,
+      "termMonths": 24,
+      "conditions": null,
+      "sourceUrl": "https://sahkovertaaja.fi/maaraaikainen-sahkosopimus/",
+      "sourceTitle": "Halvin kiinteä sähkösopimus: vertaile 25 yhtiötä (sahkovertaaja.fi)",
+      "checkedAt": "2026-11-13"
+    },
+    {
+      "id": "vaasan-sahko-kiintea-12-kk",
+      "supplier": "Vaasan Sähkö",
+      "product": "Kiinteä 12 kk",
+      "pricing": "fixed",
+      "centsPerKwh": 10.85,
+      "monthlyFee": 5.9,
+      "termMonths": 12,
+      "conditions": "No base fee for the first 2 months",
+      "sourceUrl": "https://helppohinta.fi/sahko/sahkosopimus/maaraaikainen/",
+      "sourceTitle": "Määräaikainen sähkösopimus (helppohinta.fi)",
+      "checkedAt": "2026-11-11"
+    },
+    {
+      "id": "vare-porssisahko",
+      "supplier": "Väre",
+      "product": "Pörssisähkö",
+      "pricing": "spot",
+      "centsPerKwh": 0.49,
+      "monthlyFee": 4.96,
+      "termMonths": null,
+      "conditions": null,
+      "sourceUrl": "https://www.sopimusvahti.fi/porssisahko",
+      "sourceTitle": "Pörssisähkö 2026: marginaalit ja hintavertailu (sopimusvahti.fi)",
+      "checkedAt": "2026-11-14"
+    },
+    {
+      "id": "helen-porssisahko",
+      "supplier": "Helen",
+      "product": "Pörssisähkö",
+      "pricing": "spot",
+      "centsPerKwh": 0.49,
+      "monthlyFee": 4.96,
+      "termMonths": null,
+      "conditions": null,
+      "sourceUrl": "https://www.sopimusvahti.fi/porssisahko",
+      "sourceTitle": "Pörssisähkö 2026: marginaalit ja hintavertailu (sopimusvahti.fi)",
+      "checkedAt": "2026-11-14"
+    },
+    {
+      "id": "vattenfall-porssisahko",
+      "supplier": "Vattenfall",
+      "product": "Pörssisähkö",
+      "pricing": "spot",
+      "centsPerKwh": 0.5,
+      "monthlyFee": 5.95,
+      "termMonths": null,
+      "conditions": null,
+      "sourceUrl": "https://www.sopimusvahti.fi/porssisahko",
+      "sourceTitle": "Pörssisähkö 2026: marginaalit ja hintavertailu (sopimusvahti.fi)",
+      "checkedAt": "2026-11-14"
+    },
+    {
+      "id": "fortum-tarkka",
+      "supplier": "Fortum",
+      "product": "Tarkka",
+      "pricing": "spot",
+      "centsPerKwh": 0.59,
+      "monthlyFee": 5.99,
+      "termMonths": null,
+      "conditions": null,
+      "sourceUrl": "https://selectra.fi/sahkoyhtiot/fortum/porssisahko",
+      "sourceTitle": "Fortum pörssisähkö: hinta ja marginaali (selectra.fi)",
+      "checkedAt": "2026-11-01"
+    },
+    {
+      "id": "oomi-aktiivinen",
+      "supplier": "Oomi",
+      "product": "Aktiivinen",
+      "pricing": "spot",
+      "centsPerKwh": 0.6,
+      "monthlyFee": 4.96,
+      "termMonths": null,
+      "conditions": null,
+      "sourceUrl": "https://selectra.fi/sahkoyhtiot/oomi/porssisahko",
+      "sourceTitle": "Oomi pörssisähkö: hinta ja marginaali (selectra.fi)",
+      "checkedAt": "2026-11-01"
+    }
+  ],
+  "segments": [
+    {
+      "id": "small",
+      "label": "Small flat, about 2,000 kWh",
+      "annualKwh": 2000,
+      "best": [
+        "porvoon-energia-ilmastoviisas-24-kk-yleissahko",
+        "turku-energia-louna-lahi-24-kk",
+        "cheap-energy-maaraaikainen-36-kk",
+        "pohjois-karjalan-sahko-optimi-takuu-24-kk",
+        "vare-porssisahko",
+        "helen-porssisahko"
+      ]
+    },
+    {
+      "id": "family",
+      "label": "Family flat or row house, about 6,000 kWh",
+      "annualKwh": 6000,
+      "best": [
+        "oomi-kiintea-24-kk",
+        "cheap-energy-maaraaikainen-36-kk",
+        "turku-energia-louna-lahi-24-kk",
+        "vaasan-sahko-kiintea-24-kk",
+        "vare-porssisahko",
+        "helen-porssisahko"
+      ]
+    },
+    {
+      "id": "heating",
+      "label": "House with electric heating, about 18,000 kWh",
+      "annualKwh": 18000,
+      "best": [
+        "oomi-kiintea-24-kk",
+        "vaasan-sahko-kiintea-24-kk",
+        "helen-maaraaikainen-perussahko-24-kk",
+        "cheap-energy-maaraaikainen-36-kk",
+        "vare-porssisahko",
+        "helen-porssisahko"
+      ]
+    }
+  ]
+}

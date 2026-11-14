@@ -23,6 +23,7 @@ export function SwitchBoostNote({ className }: { className?: string }) {
   if (!Object.keys(switches).length) return null;
   const boost = weeklyBoost(switches, plan);
   const spendBoost = boost >= 0.5; // below 50 cents rounds to €0, so don't mention it
+  const toFund = plan ? (plan.fromBills ?? plan.monthly) : 0;
   const names = Object.values(switches)
     .map((s) => s?.toSupplier)
     .filter(Boolean)
@@ -30,9 +31,9 @@ export function SwitchBoostNote({ className }: { className?: string }) {
   return (
     <p className={className}>
       Cheaper bills ({names}): {spendBoost ? `+${eur.format(boost)}/week to spend` : ""}
-      {spendBoost && plan ? " and " : ""}
-      {plan ? `${eur.format(plan.monthly)}/month into your fund` : ""}.{" "}
-      {!plan && (
+      {spendBoost && toFund ? " and " : ""}
+      {toFund ? `${eur.format(toFund)}/month into your fund` : ""}.{" "}
+      {!toFund && (
         <Link href="/save" className="underline underline-offset-4">
           Save it instead
         </Link>

@@ -23,7 +23,9 @@ export type SwitchRecord = {
 export type Switches = Partial<Record<BillKey, SwitchRecord>>;
 
 export type SavingsPlan = {
-  monthly: number; // EUR moved to the fund each month
+  monthly: number; // EUR moved to the fund each month, in total
+  fromGoal?: number; // part of it that is the savings goal, already outside the weekly budget
+  fromBills?: number; // part of it that cheaper bills free up (older plans: all of monthly)
   fundId: string;
   fundName: string;
   dayOfMonth: number;
@@ -84,6 +86,17 @@ const NO_ACTIONS: Record<string, BillAction> = {};
 const billStore = createStore<Record<string, BillAction>>("solvo.bill-actions.v1", NO_ACTIONS);
 const planStore = createStore<Partial<SavingsPlan>>("solvo.savings-plan.v1", NO_PLAN);
 
+// E-invoice readings by invoice id, so Gemini reads each invoice once per device, not on every visit to Bills.
+const readingStore = createStore<Record<string, unknown>>("solvo.readings.v1", {});
+export const readCachedReadings = readingStore.snapshot;
+export const useCachedReadings = readingStore.use;
+export function cacheReading(id: string, value: unknown) {
+  readingStore.set({ ...readingStore.snapshot(), [id]: value });
+}
+export function clearCachedReadings() {
+  readingStore.set(null);
+}
+
 export const useSwitches = switchStore.use;
 
 export function useSavingsPlan(): SavingsPlan | null {
@@ -94,7 +107,10 @@ export function useSavingsPlan(): SavingsPlan | null {
 export const useBillActions = billStore.use;
 
 export function setBillAction(billId: string, action: BillAction["action"]) {
-  billStore.set({ ...billStore.snapshot(), [billId]: { action, at: new Date().toISOString() } });
+  billStore.set({
+    ...billStore.snapshot(),
+    [billId]: { action, at: new Date().toISOString() },
+  });
 }
 
 export function approveSwitch(rec: SwitchRecord) {
@@ -103,6 +119,10 @@ export function approveSwitch(rec: SwitchRecord) {
 
 export function approveSavingsPlan(plan: SavingsPlan) {
   planStore.set(plan);
+}
+
+export function cancelSavingsPlan() {
+  planStore.set(null);
 }
 
 export function resetDemo() {
@@ -122,6 +142,6 @@ export function monthlyFreed(s: Switches) {
 
 /** How much more the user can spend each week: freed money minus what goes to the fund. */
 export function weeklyBoost(s: Switches, plan: SavingsPlan | null = null) {
-  const toSpend = Math.max(0, monthlyFreed(s) - (plan?.monthly ?? 0));
+  const toSpend = Math.max(0, monthlyFreed(s) - (plan ? (plan.fromBills ?? plan.monthly) : 0));
   return (toSpend * 12) / WEEKS_PER_YEAR;
 }
