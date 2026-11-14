@@ -53,6 +53,28 @@ export default function Home() {
         </CardContent>
       </Card>
 
+      {/* Coach chat entry */}
+      <div className="flex flex-col gap-2">
+        <Link
+          href="/coach"
+          className="flex h-11 items-center justify-between rounded-xl border bg-card px-3 text-sm text-muted-foreground hover:bg-muted"
+        >
+          <span>Ask Solvo about your money…</span>
+          <span className="font-medium text-emerald-800">Ask</span>
+        </Link>
+        <div className="flex flex-wrap gap-1.5">
+          {["How much did I spend on taxis?", "Can I afford an €80 dinner this week?"].map((q) => (
+            <Link
+              key={q}
+              href={`/coach?q=${encodeURIComponent(q)}`}
+              className="rounded-full border px-2.5 py-1 text-xs text-muted-foreground hover:bg-muted"
+            >
+              {q}
+            </Link>
+          ))}
+        </div>
+      </div>
+
       {/* How the number is built */}
       <Card size="sm">
         <CardHeader>
