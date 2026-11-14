@@ -1,0 +1,247 @@
+{
+  "agent": "telecom",
+  "ranAt": "2026-11-14T12:25:00.000Z",
+  "mode": "seed",
+  "queries": [
+    "rajaton 5G liittymä hinta €/kk Elisa Telia DNA Moi",
+    "kuitu kotinetti 1000M hinta €/kk"
+  ],
+  "pagesRead": 20,
+  "sources": [
+    {
+      "url": "https://vertaa-kilpailuttajat.fi/5g-liittyma/",
+      "title": "5G-liittymä: vertaa hinnat (vertaa-kilpailuttajat.fi)"
+    },
+    {
+      "url": "https://parasnetti.fi/valokuitu",
+      "title": "Valokuitu: vertaa hinnat (parasnetti.fi)"
+    },
+    {
+      "url": "https://lennu.fi/kuluttajat-ja-taloyhtiot/valokuitu/kesakuu2026-1000m-kampanja/",
+      "title": "Lennu Kotikuitu 1000M (lennu.fi)"
+    }
+  ],
+  "offers": [
+    {
+      "id": "moi-5g-rajaton-200m",
+      "operator": "Moi",
+      "product": "5G Rajaton 200M",
+      "kind": "mobile",
+      "monthlyPrice": 23,
+      "speedMbps": 200,
+      "conditions": "No fixed term",
+      "sourceUrl": "https://vertaa-kilpailuttajat.fi/5g-liittyma/",
+      "sourceTitle": "5G-liittymä: vertaa hinnat (vertaa-kilpailuttajat.fi)",
+      "checkedAt": "2026-11-14"
+    },
+    {
+      "id": "moi-5g-rajaton-450m",
+      "operator": "Moi",
+      "product": "5G Rajaton 450M",
+      "kind": "mobile",
+      "monthlyPrice": 26,
+      "speedMbps": 450,
+      "conditions": "No fixed term",
+      "sourceUrl": "https://vertaa-kilpailuttajat.fi/5g-liittyma/",
+      "sourceTitle": "5G-liittymä: vertaa hinnat (vertaa-kilpailuttajat.fi)",
+      "checkedAt": "2026-11-14"
+    },
+    {
+      "id": "moi-5g-rajaton-1000m",
+      "operator": "Moi",
+      "product": "5G Rajaton 1000M",
+      "kind": "mobile",
+      "monthlyPrice": 38,
+      "speedMbps": 1000,
+      "conditions": "No fixed term",
+      "sourceUrl": "https://vertaa-kilpailuttajat.fi/5g-liittyma/",
+      "sourceTitle": "5G-liittymä: vertaa hinnat (vertaa-kilpailuttajat.fi)",
+      "checkedAt": "2026-11-14"
+    },
+    {
+      "id": "telia-5g-rajaton-200m",
+      "operator": "Telia",
+      "product": "5G Rajaton 200M",
+      "kind": "mobile",
+      "monthlyPrice": 36,
+      "speedMbps": 200,
+      "conditions": "29 €/mo for the first 12 months on a 12-month contract",
+      "sourceUrl": "https://vertaa-kilpailuttajat.fi/5g-liittyma/",
+      "sourceTitle": "5G-liittymä: vertaa hinnat (vertaa-kilpailuttajat.fi)",
+      "checkedAt": "2026-11-14"
+    },
+    {
+      "id": "telia-5g-rajaton-400m",
+      "operator": "Telia",
+      "product": "5G Rajaton 400M",
+      "kind": "mobile",
+      "monthlyPrice": 39,
+      "speedMbps": 400,
+      "conditions": "31 €/mo for the first 12 months on a 12-month contract",
+      "sourceUrl": "https://vertaa-kilpailuttajat.fi/5g-liittyma/",
+      "sourceTitle": "5G-liittymä: vertaa hinnat (vertaa-kilpailuttajat.fi)",
+      "checkedAt": "2026-11-14"
+    },
+    {
+      "id": "telia-5g-rajaton-600m",
+      "operator": "Telia",
+      "product": "5G Rajaton 600M",
+      "kind": "mobile",
+      "monthlyPrice": 45,
+      "speedMbps": 600,
+      "conditions": "33 €/mo for the first 12 months on a 12-month contract",
+      "sourceUrl": "https://vertaa-kilpailuttajat.fi/5g-liittyma/",
+      "sourceTitle": "5G-liittymä: vertaa hinnat (vertaa-kilpailuttajat.fi)",
+      "checkedAt": "2026-11-14"
+    },
+    {
+      "id": "elisa-5g-rajaton-400m",
+      "operator": "Elisa",
+      "product": "5G Rajaton 400M",
+      "kind": "mobile",
+      "monthlyPrice": 43,
+      "speedMbps": 400,
+      "conditions": "35 €/mo for the first 24 months",
+      "sourceUrl": "https://vertaa-kilpailuttajat.fi/5g-liittyma/",
+      "sourceTitle": "5G-liittymä: vertaa hinnat (vertaa-kilpailuttajat.fi)",
+      "checkedAt": "2026-11-14"
+    },
+    {
+      "id": "elisa-5g-rajaton-600m",
+      "operator": "Elisa",
+      "product": "5G Rajaton 600M",
+      "kind": "mobile",
+      "monthlyPrice": 46,
+      "speedMbps": 600,
+      "conditions": "39 €/mo for the first 24 months",
+      "sourceUrl": "https://vertaa-kilpailuttajat.fi/5g-liittyma/",
+      "sourceTitle": "5G-liittymä: vertaa hinnat (vertaa-kilpailuttajat.fi)",
+      "checkedAt": "2026-11-14"
+    },
+    {
+      "id": "elisa-5g-rajaton-1000m",
+      "operator": "Elisa",
+      "product": "5G Rajaton 1000M",
+      "kind": "mobile",
+      "monthlyPrice": 54,
+      "speedMbps": 1000,
+      "conditions": "51 €/mo for the first 24 months",
+      "sourceUrl": "https://vertaa-kilpailuttajat.fi/5g-liittyma/",
+      "sourceTitle": "5G-liittymä: vertaa hinnat (vertaa-kilpailuttajat.fi)",
+      "checkedAt": "2026-11-14"
+    },
+    {
+      "id": "dna-5g-rajaton-400m",
+      "operator": "DNA",
+      "product": "5G Rajaton 400M",
+      "kind": "mobile",
+      "monthlyPrice": 41,
+      "speedMbps": 400,
+      "conditions": "35 €/mo for the first 12 months",
+      "sourceUrl": "https://vertaa-kilpailuttajat.fi/5g-liittyma/",
+      "sourceTitle": "5G-liittymä: vertaa hinnat (vertaa-kilpailuttajat.fi)",
+      "checkedAt": "2026-11-14"
+    },
+    {
+      "id": "dna-5g-rajaton-600m",
+      "operator": "DNA",
+      "product": "5G Rajaton 600M",
+      "kind": "mobile",
+      "monthlyPrice": 46,
+      "speedMbps": 600,
+      "conditions": "39 €/mo for the first 12 months",
+      "sourceUrl": "https://vertaa-kilpailuttajat.fi/5g-liittyma/",
+      "sourceTitle": "5G-liittymä: vertaa hinnat (vertaa-kilpailuttajat.fi)",
+      "checkedAt": "2026-11-14"
+    },
+    {
+      "id": "dna-5g-rajaton-1000m",
+      "operator": "DNA",
+      "product": "5G Rajaton 1000M",
+      "kind": "mobile",
+      "monthlyPrice": 51,
+      "speedMbps": 1000,
+      "conditions": "49 €/mo for the first 12 months",
+      "sourceUrl": "https://vertaa-kilpailuttajat.fi/5g-liittyma/",
+      "sourceTitle": "5G-liittymä: vertaa hinnat (vertaa-kilpailuttajat.fi)",
+      "checkedAt": "2026-11-14"
+    },
+    {
+      "id": "lponet-kuitu-1g",
+      "operator": "LPOnet",
+      "product": "Kuitu 1G",
+      "kind": "home",
+      "monthlyPrice": 48.2,
+      "speedMbps": 1000,
+      "conditions": "19.90 €/mo for the first 12 months. Only where LPOnet has fibre",
+      "sourceUrl": "https://parasnetti.fi/valokuitu",
+      "sourceTitle": "Valokuitu: vertaa hinnat (parasnetti.fi)",
+      "checkedAt": "2026-11-14"
+    },
+    {
+      "id": "valoo-netti-l-1000m",
+      "operator": "Valoo",
+      "product": "Netti L 1000M",
+      "kind": "home",
+      "monthlyPrice": 52.9,
+      "speedMbps": 1000,
+      "conditions": "19 €/mo for the first 24 months. Only where Valoo has fibre",
+      "sourceUrl": "https://parasnetti.fi/valokuitu",
+      "sourceTitle": "Valokuitu: vertaa hinnat (parasnetti.fi)",
+      "checkedAt": "2026-11-14"
+    },
+    {
+      "id": "lennu-kotikuitu-1000m",
+      "operator": "Lennu",
+      "product": "Kotikuitu 1000M",
+      "kind": "home",
+      "monthlyPrice": 56,
+      "speedMbps": 1000,
+      "conditions": "43 €/mo for the first 12 months, 24-month contract. Only in Lennu fibre areas",
+      "sourceUrl": "https://lennu.fi/kuluttajat-ja-taloyhtiot/valokuitu/kesakuu2026-1000m-kampanja/",
+      "sourceTitle": "Lennu Kotikuitu 1000M (lennu.fi)",
+      "checkedAt": "2026-11-14"
+    }
+  ],
+  "segments": [
+    {
+      "id": "mobile-basic",
+      "label": "Mobile, up to 300 Mbit/s",
+      "annualKwh": 0,
+      "best": [
+        "moi-5g-rajaton-200m",
+        "telia-5g-rajaton-200m"
+      ]
+    },
+    {
+      "id": "mobile-mid",
+      "label": "Mobile, 400 to 600 Mbit/s",
+      "annualKwh": 0,
+      "best": [
+        "moi-5g-rajaton-450m",
+        "telia-5g-rajaton-400m",
+        "dna-5g-rajaton-400m"
+      ]
+    },
+    {
+      "id": "mobile-fast",
+      "label": "Mobile, 1000 Mbit/s",
+      "annualKwh": 0,
+      "best": [
+        "moi-5g-rajaton-1000m",
+        "dna-5g-rajaton-1000m",
+        "elisa-5g-rajaton-1000m"
+      ]
+    },
+    {
+      "id": "home-fast",
+      "label": "Home internet, 1000 Mbit/s",
+      "annualKwh": 0,
+      "best": [
+        "lponet-kuitu-1g",
+        "valoo-netti-l-1000m",
+        "lennu-kotikuitu-1000m"
+      ]
+    }
+  ]
+}

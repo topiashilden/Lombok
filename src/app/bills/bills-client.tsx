@@ -5,9 +5,11 @@ import { ArrowRight, Cable, Check, FileText, Smartphone, Sparkles, Zap } from "l
 import { BackButton, Chip, Group, IconTile, PAGE, PageTitle, TopBar, eur, eur2, primaryButton } from "@/components/solvo/ui";
 import { ApproveSheet, DoneView, EditField, OfferOption, ReadFields, SavingSlab, StickyAction } from "./switch-ui";
 import type { Reading } from "@/lib/einvoice";
-import { compare, OFFERS_UPDATED, type ContractTerms } from "@/lib/offers";
-import { compareTelecom } from "@/lib/telecom-offers";
+import { compare, type ContractTerms } from "@/lib/offers";
+import { SAVED_ELECTRICITY_DB, domainOf, type MarketDb } from "@/lib/market";
+import { compareTelecom, telecomTermsFrom } from "@/lib/telecom-offers";
 import { approveSwitch, useSavingsPlan, useSwitches, weeklyBoost, type BillKey, type SwitchRecord } from "@/lib/switches";
+import { MarketAgentCard } from "./market-agent-card";
 import { PhotoUpload } from "./photo-upload";
 import { TelecomDetail } from "./telecom-detail";
 
@@ -154,11 +156,7 @@ function FeaturedInvoice({ meta, loaded, onOpen }: { meta: InvoiceMeta; loaded: 
   const isElectricity = r.kind === "electricity_energy";
   const saving = isElectricity
     ? compare(termsFrom(r)).recommended.saving
-    : compareTelecom({
-        lines: r.mobileLines ?? 1,
-        perLine: r.pricePerLine ?? r.monthlyCost,
-        homeInternet: r.homeInternetMonthly ?? 0,
-      }).recommended.saving;
+    : compareTelecom(telecomTermsFrom(r)).recommended.saving;
   const Icon = KIND_ICON[r.kind];
   return (
     <section className="rounded-[24px] bg-card p-5 shadow-[0_1px_3px_rgba(15,42,31,0.06)] ring-1 ring-warn/25">
@@ -263,7 +261,8 @@ function ElectricityDetail(props: { loaded: Loaded; weeklyBudget: number; remain
   const set = (k: keyof ContractTerms) => (v: number | null) =>
     setTerms((t) => ({ ...t, [k]: v ?? (k === "centsAfterEnd" || k === "monthlyFeeAfterEnd" ? null : 0) }));
 
-  const cmp = useMemo(() => compare(terms), [terms]);
+  const [db, setDb] = useState<MarketDb>(SAVED_ELECTRICITY_DB);
+  const cmp = useMemo(() => compare(terms, db), [terms, db]);
   const [chosenId, setChosenId] = useState<string | null>(null);
   const chosen = cmp.offers.find((o) => o.id === chosenId) ?? cmp.recommended;
   const [stage, setStage] = useState<"compare" | "confirm" | "done">("compare");
@@ -324,7 +323,7 @@ function ElectricityDetail(props: { loaded: Loaded; weeklyBudget: number; remain
       <Group
         title="Your options for a year"
         aside={`${terms.annualKwh.toLocaleString("fi-FI")} kWh`}
-        footer={`Demo offer table, updated ${fmtDate(OFFERS_UPDATED)}. Providers are fictional. Today's price would cost ${eur.format(cmp.current)} a year.`}
+        footer={`Real public prices found by Solvo's market agent, energy only. Your current price would cost ${eur.format(cmp.current)} a year.`}
       >
         <div role="radiogroup" aria-label="Electricity offers">
           {cmp.offers.map((o) => (
@@ -336,10 +335,13 @@ function ElectricityDetail(props: { loaded: Loaded; weeklyBudget: number; remain
               yearly={o.yearly}
               detail={
                 <>
-                  {o.pricing === "spot" ? "Spot, about " : ""}
-                  {o.centsPerKwh.toFixed(2)} c/kWh + {o.monthlyFee.toFixed(2)} €/mo
+                  {o.pricing === "spot" ? `Spot, about ${o.centsPerKwh.toFixed(2)} c/kWh (margin ${o.marginCents?.toFixed(2)})` : `${o.centsPerKwh.toFixed(2)} c/kWh`}
+                  {` + ${o.monthlyFee.toFixed(2)} €/mo`}
                   {o.termMonths ? `, fixed ${o.termMonths} months` : ""}
                   {o.note ? `. ${o.note}` : ""}
+                  <span className="mt-0.5 block">
+                    Source: {domainOf(o.sourceUrl)}, checked {fmtDate(o.checkedAt)}
+                  </span>
                 </>
               }
               pick={o.id === cmp.recommended.id ? "Coach's pick: a fixed price is easier to budget" : undefined}
@@ -347,6 +349,20 @@ function ElectricityDetail(props: { loaded: Loaded; weeklyBudget: number; remain
           ))}
         </div>
       </Group>
+
+      <MarketAgentCard
+        db={db}
+        onResult={setDb}
+        forYou={
+          <>
+            For you it only picks the best of your group,{" "}
+            <span className="font-medium text-foreground">
+              {cmp.segment.label.charAt(0).toLowerCase() + cmp.segment.label.slice(1)}
+            </span>
+            , and prices them at your own {terms.annualKwh.toLocaleString("fi-FI")} kWh.
+          </>
+        }
+      />
 
       <StickyAction onClick={() => setStage("confirm")}>Switch to {chosen.supplier}</StickyAction>
 
