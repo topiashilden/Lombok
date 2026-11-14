@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { Check } from "lucide-react";
 import { ApproveSheet } from "@/app/bills/switch-ui";
-import { BackLink, Chip, Group, PAGE, PageTitle, Slab, TopBar, eur, primaryButton, secondaryButton } from "@/components/solvo/ui";
+import { Chip, Group, PAGE, PageTitle, Slab, TopBar, eur, primaryButton, secondaryButton } from "@/components/solvo/ui";
 import { FUNDS, projectSavings } from "@/lib/funds";
 import { approveSavingsPlan, monthlyFreed, useSavingsPlan, useSwitches, weeklyBoost } from "@/lib/switches";
 
@@ -23,7 +23,7 @@ export function SaveClient({ remaining }: { remaining: number }) {
   const fund = FUNDS.find((f) => f.id === fundId)!;
   const net = fund.illustrativeReturnPct - fund.yearlyFeePct;
   const proj = projectSavings(monthly, YEARS, net);
-  const top = <TopBar back={<BackLink href="/" label="Home" />} />;
+  const top = <TopBar />;
 
   if (plan) {
     const pf = FUNDS.find((f) => f.id === plan.fundId) ?? FUNDS[0];
@@ -75,7 +75,7 @@ export function SaveClient({ remaining }: { remaining: number }) {
   const choices = [freed, Math.round(freed / 2)].filter((v, i, a) => v > 0 && a.indexOf(v) === i);
 
   return (
-    <main className={`${PAGE} pb-[calc(6rem+env(safe-area-inset-bottom))]`}>
+    <main className={`${PAGE} pb-[calc(6rem+var(--tabbar-h))]`}>
       {top}
       <PageTitle title="Save what your bills free up">
         Your cheaper contracts free {eur.format(freed)} a month. Spend it, or let it grow in an S-Pankki fund.
@@ -144,7 +144,7 @@ export function SaveClient({ remaining }: { remaining: number }) {
         ))}
       </Group>
 
-      <div className="fixed inset-x-0 bottom-0 z-20 mx-auto w-full max-w-[430px] bg-gradient-to-t from-background via-background/95 to-background/0 px-4 pt-6 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+      <div className="fixed inset-x-0 bottom-0 z-20 mx-auto w-full max-w-[430px] bg-gradient-to-t from-background via-background/95 to-background/0 px-4 pt-6 pb-[calc(0.75rem+var(--tabbar-h))]">
         <button type="button" className={primaryButton} onClick={() => setConfirming(true)}>
           Start saving {eur.format(monthly)} a month
         </button>

@@ -55,6 +55,8 @@
 }
 
 :root {
+  /* Space the bottom tab bar takes, safe area included. Pages and fixed action bars pad by this. */
+  --tabbar-h: calc(3.5rem + env(safe-area-inset-bottom));
   /* Solvo palette: cool frost paper, deep spruce ink, the logo's money green. */
   --background: #f2f4f1; /* frost: page */
   --foreground: #0f2a1f; /* spruce ink: text */
@@ -247,4 +249,13 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* No tab bar (full-screen pages), or a text field has focus and the keyboard is up: only the safe area is left. */
+:root:not(:has(#tabbar)),
+:root:has(:is(input:not([type="file"], [type="range"], [type="checkbox"], [type="radio"]), textarea):focus) {
+  --tabbar-h: env(safe-area-inset-bottom);
+}
+:root:has(:is(input:not([type="file"], [type="range"], [type="checkbox"], [type="radio"]), textarea):focus) #tabbar {
+  display: none;
 }
