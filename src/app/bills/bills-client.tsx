@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type { Reading } from "@/lib/einvoice";
 import { compare, OFFERS_UPDATED, type ContractTerms } from "@/lib/offers";
-import { approveSwitch, useSwitches, weeklyBoost, type BillKey } from "@/lib/switches";
+import { approveSwitch, useSavingsPlan, useSwitches, weeklyBoost, type BillKey } from "@/lib/switches";
 import { TelecomDetail } from "./telecom-detail";
 
 type InvoiceMeta = { id: string; payment: { date: string; amount: number } };
@@ -202,7 +202,7 @@ function ElectricityDetail(props: { loaded: Loaded; weeklyBudget: number; remain
   const chosen = cmp.offers.find((o) => o.id === chosenId) ?? cmp.recommended;
   const [stage, setStage] = useState<"compare" | "confirm" | "done">("compare");
   const perWeek = chosen.saving / 52;
-  const boost = weeklyBoost(useSwitches()); // all approved switches, including this one once approved
+  const boost = weeklyBoost(useSwitches(), useSavingsPlan()); // all approved switches, including this one once approved
   const startDate = r.contractEndDate ? nextDay(r.contractEndDate) : null;
 
   if (stage === "done") {
@@ -241,6 +241,12 @@ function ElectricityDetail(props: { loaded: Loaded; weeklyBudget: number; remain
             Solvo will remind you a month before this contract ends, so it never rolls over to a worse price again.
           </p>
         )}
+        <Link
+          href="/save"
+          className="flex h-11 items-center justify-center rounded-lg bg-emerald-800 font-medium text-white hover:bg-emerald-900"
+        >
+          Save it in a fund instead
+        </Link>
         <Link href="/" className="text-center text-sm text-muted-foreground underline underline-offset-4">
           Back to home
         </Link>

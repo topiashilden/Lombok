@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type { Reading } from "@/lib/einvoice";
-import { approveSwitch, useSwitches, weeklyBoost } from "@/lib/switches";
+import { approveSwitch, useSavingsPlan, useSwitches, weeklyBoost } from "@/lib/switches";
 import { compareTelecom, TELECOM_OFFERS_UPDATED, type TelecomTerms } from "@/lib/telecom-offers";
 
 const eur = new Intl.NumberFormat("fi-FI", { style: "currency", currency: "EUR", maximumFractionDigits: 0 });
@@ -38,12 +38,13 @@ export function TelecomDetail(props: {
   const chosen = cmp.offers.find((o) => o.id === chosenId) ?? cmp.recommended;
   const [stage, setStage] = useState<"compare" | "confirm" | "done">("compare");
   const switches = useSwitches();
+  const plan = useSavingsPlan();
   const startDate = startDateFrom(props.asOf);
   const perWeek = Math.max(0, chosen.saving) / 52;
   const isMatch = chosen.kind === "price_match";
 
   if (stage === "done") {
-    const boost = weeklyBoost(switches);
+    const boost = weeklyBoost(switches, plan);
     return (
       <div className="flex flex-col gap-4">
         <Card className="bg-emerald-950 text-emerald-50 ring-emerald-900">
@@ -78,6 +79,12 @@ export function TelecomDetail(props: {
             because your fixed costs got smaller.
           </CardContent>
         </Card>
+        <Link
+          href="/save"
+          className="flex h-11 items-center justify-center rounded-lg bg-emerald-800 font-medium text-white hover:bg-emerald-900"
+        >
+          Save it in a fund instead
+        </Link>
         <Link href="/" className="text-center text-sm text-muted-foreground underline underline-offset-4">
           Back to home
         </Link>
