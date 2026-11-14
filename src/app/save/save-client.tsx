@@ -5,7 +5,7 @@ import { useState } from "react";
 import { CalendarDays, Landmark, PiggyBank, Receipt, Target, TrendingUp } from "lucide-react";
 import { ApproveSheet } from "@/app/bills/switch-ui";
 import { Chip, Group, IconTile, PAGE, PageTitle, Row, Slab, TopBar, eur, primaryButton, secondaryButton } from "@/components/solvo/ui";
-import { FUNDS, FUNDS_SOURCE, fundById, projectFund } from "@/lib/funds";
+import { FUND_TYPES, FUNDS, FUNDS_SOURCE, fundById, projectFund, type FundType } from "@/lib/funds";
 import { approveSavingsPlan, cancelSavingsPlan, monthlyFreed, useSavingsPlan, useSwitches, weeklyBoost } from "@/lib/switches";
 
 const YEARS = 10;
@@ -34,6 +34,8 @@ export function SaveClient(props: Props) {
   const freed = Math.floor(monthlyFreed(switches));
   const [billShare, setBillShare] = useState<"all" | "half" | "none">("all");
   const [fundId, setFundId] = useState(FUNDS[0].id);
+  const [fundType, setFundType] = useState<FundType>("Equity");
+  const typeInfo = FUND_TYPES.find((t) => t.type === fundType)!;
   const [confirming, setConfirming] = useState(false);
 
   const fromBills = billShare === "all" ? freed : billShare === "half" ? Math.round(freed / 2) : 0;
@@ -215,8 +217,31 @@ export function SaveClient(props: Props) {
         )}
       </Group>
 
-      <Group title="Which fund?" footer={`You choose: Solvo doesn't give investment advice. ${FUNDS_SOURCE}`}>
-        {FUNDS.map((f) => (
+      <div className="mt-7 flex items-baseline justify-between gap-3 px-1">
+        <h2 className="font-display text-[17px] font-semibold tracking-[-0.01em]">Which fund?</h2>
+        {fund.type !== fundType && (
+          <span className="truncate text-[13px] text-muted-foreground">Chosen: {fund.name.replace("S-Pankki ", "")}</span>
+        )}
+      </div>
+      <div className="-mx-4 mt-2 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none]" role="tablist" aria-label="Fund type">
+        {FUND_TYPES.map((t) => (
+          <button
+            key={t.type}
+            type="button"
+            role="tab"
+            aria-selected={fundType === t.type}
+            onClick={() => setFundType(t.type)}
+            className={`flex h-11 shrink-0 items-center rounded-full px-4 text-[14px] font-semibold whitespace-nowrap ${fundType === t.type ? "bg-primary text-primary-foreground" : "bg-card text-foreground/80 shadow-[0_1px_3px_rgba(15,42,31,0.06)]"}`}
+          >
+            {t.label} · {FUNDS.filter((f) => f.type === t.type).length}
+          </button>
+        ))}
+      </div>
+      <Group
+        className="mt-3"
+        footer={`${typeInfo.note ? `${typeInfo.note} ` : ""}You choose: Solvo doesn't give investment advice. ${FUNDS_SOURCE}`}
+      >
+        {FUNDS.filter((f) => f.type === fundType).map((f) => (
           <button
             key={f.id}
             type="button"
@@ -237,7 +262,7 @@ export function SaveClient(props: Props) {
                 {f.subscriptionFeePct ? `, ${pct(f.subscriptionFeePct)} per purchase` : ""}
               </span>
             </span>
-            <Chip>{f.type}</Chip>
+            {f.subscriptionFeePct >= 1 && <Chip tone="warn">Special</Chip>}
           </button>
         ))}
       </Group>
