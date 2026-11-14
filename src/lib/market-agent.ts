@@ -1,6 +1,6 @@
 import "server-only";
 import type { AgentEvent } from "./market-agent-events";
-import { exaStructured, uniqueSources } from "./exa";
+import { exaKey, exaStructured, uniqueSources } from "./exa";
 import { SAVED_ELECTRICITY_DB, buildSegments, slug, type MarketDb, type MarketOffer } from "./market";
 
 // The electricity market agent. Runs on Solvo's side (nightly in production, "Run now" in the demo),
@@ -80,7 +80,7 @@ function plausible(o: { pricing: Pricing; centsPerKwh: number; monthlyFee: numbe
 }
 
 export async function* runElectricityAgent(): AsyncGenerator<AgentEvent> {
-  const key = process.env.EXA_API_KEY;
+  const key = exaKey();
   const saved = SAVED_ELECTRICITY_DB;
   const fallback = (error: string): AgentEvent => ({ type: "result", db: saved, live: false, error });
 
