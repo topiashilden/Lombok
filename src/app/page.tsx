@@ -1,11 +1,14 @@
 import { Screen } from "@/components/solvo/screen";
 import Link from "next/link";
-import { ArrowRight, MessageCircle, ReceiptText } from "lucide-react";
+import { ArrowRight, CalendarDays, MessageCircle, ReceiptText } from "lucide-react";
 import { LiveWeeklyEuro, ResetDemoButton, SwitchBoostNote } from "@/components/live-budget";
+import { OnboardingGate, PlanCard } from "@/components/onboarding-home";
 import { OverdueBillCard } from "@/components/overdue-bill";
+import { UpcomingCard } from "@/components/upcoming-card";
 import { Chip, Group, IconTile, Logo, PAGE, Row, Slab, eur, primaryButton } from "@/components/solvo/ui";
 import { safeToSpend, topCategories, unknownBills } from "@/lib/coach";
 import { BASKET_LABELS, type Basket } from "@/lib/demo";
+import { inferSchedule } from "@/lib/schedule";
 import { getSource } from "@/lib/source";
 
 const dateFmt = new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
@@ -17,6 +20,7 @@ const BASKET_COLOR: Record<Basket, string> = { 1: "bg-chart-1", 2: "bg-chart-2",
 export default function Home() {
   const { customer: c, local } = getSource();
   const s = safeToSpend(c);
+  const schedule = inferSchedule(c);
   const bills = unknownBills(c);
   const baskets = [1, 2, 3] as Basket[];
   const yearTotal = baskets.reduce((sum, b) => sum + c.summary.basketYear[b], 0);
@@ -27,6 +31,7 @@ export default function Home() {
   return (
     <Screen>
       <main className={PAGE}>
+        <OnboardingGate />
         {local && (
           <p className="mb-2 rounded-xl bg-[#5a1a12] px-3 py-2 text-center text-[12px] font-medium text-white">
             My Nordea data, local only. Do not share or record this screen.
@@ -39,7 +44,16 @@ export default function Home() {
 
         {/* The one number */}
         <Slab className="mt-4">
-          <p className="text-[15px] text-white/70">Safe to spend this week</p>
+          <div className="flex items-start justify-between gap-3">
+            <p className="text-[15px] text-white/70">Safe to spend this week</p>
+            <Link
+              href="/calendar"
+              className="-mt-1 -mr-1 flex h-11 items-center gap-1.5 rounded-full bg-white/12 px-3.5 text-[14px] font-medium text-white active:bg-white/20"
+            >
+              <CalendarDays className="size-[18px]" aria-hidden />
+              Calendar
+            </Link>
+          </div>
           <p
             className={`num animate-rise mt-1 font-display text-[64px] leading-none font-semibold tracking-[-0.035em] ${over ? "text-[#ffb4a3]" : ""}`}
           >
@@ -82,6 +96,10 @@ export default function Home() {
         </Slab>
 
         <OverdueBillCard asOf={c.asOf} />
+
+        <PlanCard />
+
+        <UpcomingCard items={schedule.items} asOf={c.asOf} />
 
         {/* The bank's blind spot, and Solvo's hook */}
         <section className="mt-4 rounded-[24px] bg-card p-5 shadow-[0_1px_3px_rgba(15,42,31,0.06)]">
