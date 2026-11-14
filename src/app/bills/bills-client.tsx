@@ -20,6 +20,7 @@ import {
 import { ApproveSheet, DoneView, EditField, OfferOption, ReadFields, SavingSlab, StickyAction } from "./switch-ui";
 import { LearnChip } from "@/components/learn/learn-chip";
 import type { Reading } from "@/lib/einvoice";
+import { useUrlStep } from "@/lib/use-url-step";
 import { compare, type ContractTerms, type ElectricityPreference } from "@/lib/offers";
 import { SAVED_ELECTRICITY_DB, domainOf, type MarketDb } from "@/lib/market";
 import { compareTelecom, telecomTermsFrom } from "@/lib/telecom-offers";
@@ -92,12 +93,14 @@ export function BillsClient(props: {
     return { ...fromCache, ...fetched };
   }, [stored, fetched]);
   const [open, setOpenState] = useState<string | null>(null);
-  // Opening a contract slides it in like a new screen; going back slides it out.
-  const setOpen = (id: string | null) =>
+  // Opening a contract slides it in like a new screen; going back slides it out. Each opened contract is its own
+  // history entry (?bill=id), so the iPhone's swipe back returns to the list instead of leaving Bills.
+  const step = useUrlStep("bill", (id, back) =>
     startTransition(() => {
-      addTransitionType(id ? "nav-forward" : "nav-back");
+      addTransitionType(back || !id ? "nav-back" : "nav-forward");
       setOpenState(id);
-    });
+    }),
+  );
   const [photos, setPhotos] = useState<InvoiceMeta[]>([]);
   const switches = useSwitches();
 
@@ -135,7 +138,7 @@ export function BillsClient(props: {
 
   return (
     <main className={PAGE}>
-      <TopBar back={open ? <BackButton onClick={() => setOpen(null)} label="Bills" /> : undefined} />
+      <TopBar back={open ? <BackButton onClick={() => step.back(null)} label="Bills" /> : undefined} />
 
       <SubScreen id={open && openInvoice ? open : "list"}>
         <div className="flex flex-1 flex-col">
@@ -163,7 +166,7 @@ export function BillsClient(props: {
               </PageTitle>
 
               {actionable.map((inv) => (
-                <FeaturedInvoice key={inv.id} meta={inv} loaded={loaded[inv.id]!} onOpen={() => setOpen(inv.id)} />
+                <FeaturedInvoice key={inv.id} meta={inv} loaded={loaded[inv.id]!} onOpen={() => step.push(inv.id)} />
               ))}
 
               {others.length > 0 && (
