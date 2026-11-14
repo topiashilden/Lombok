@@ -3,7 +3,7 @@
 import { ArrowUp, ArrowUpRight, Check, GraduationCap, ReceiptText, Sparkles } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { LearnPack } from "@/components/learn/learn-pack";
-import { Group, TopBar, eur } from "@/components/solvo/ui";
+import { BackButton, Group, TopBar, eur } from "@/components/solvo/ui";
 import { PACK_IDS, PACK_META, getPack, packFromText, type LearnContext, type PackId } from "@/lib/learn";
 import { useLearnProgress } from "@/lib/learn-store";
 import type { SpendingResult } from "@/lib/spending";
@@ -90,7 +90,21 @@ export function CoachClient({ learn }: { learn: LearnContext }) {
   return (
     <main className="flex min-h-dvh flex-1 flex-col">
       <header className="sticky top-0 z-10 bg-background/85 px-4 pt-[calc(0.75rem+env(safe-area-inset-top))] backdrop-blur-xl">
-        <TopBar />
+        {/* Once a pack or question is open, a way back to the start screen with the packs and suggestions. */}
+        <TopBar
+          back={
+            messages.length > 0 ? (
+              <BackButton
+                label="Start"
+                onClick={() => {
+                  setMessages([]);
+                  setInput("");
+                  window.scrollTo({ top: 0 });
+                }}
+              />
+            ) : undefined
+          }
+        />
       </header>
 
       <div className="flex flex-1 flex-col gap-3 px-4 pt-3 pb-4">
