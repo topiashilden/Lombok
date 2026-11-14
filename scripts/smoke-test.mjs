@@ -67,10 +67,12 @@ try {
     if (!data.reading) throw new Error("no reading in response");
   });
   await check("POST /api/market-agent (saved run without keys)", async () => {
-    const res = await fetch(BASE + "/api/market-agent", { method: "POST" });
-    if (res.status !== 200) throw new Error(`status ${res.status}`);
-    const last = JSON.parse((await res.text()).trim().split("\n").pop());
-    if (last.type !== "result" || !last.db?.offers?.length) throw new Error(`unexpected last event: ${JSON.stringify(last).slice(0, 200)}`);
+    for (const agent of ["electricity", "telecom"]) {
+      const res = await fetch(BASE + "/api/market-agent", { method: "POST", body: JSON.stringify({ agent }) });
+      if (res.status !== 200) throw new Error(`${agent}: status ${res.status}`);
+      const last = JSON.parse((await res.text()).trim().split("\n").pop());
+      if (last.type !== "result" || !last.db?.offers?.length) throw new Error(`${agent}: unexpected last event: ${JSON.stringify(last).slice(0, 200)}`);
+    }
   });
   await check("POST /api/coach (offline answer)", async () => {
     const data = await postJson("/api/coach", { messages: [{ role: "user", text: "How much did I spend on restaurants?" }] });

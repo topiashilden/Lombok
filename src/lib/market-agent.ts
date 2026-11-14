@@ -1,5 +1,6 @@
 import "server-only";
 import type { AgentEvent } from "./market-agent-events";
+import { exaStructured, uniqueSources } from "./exa";
 import { SAVED_ELECTRICITY_DB, buildSegments, slug, type MarketDb, type MarketOffer } from "./market";
 
 // The electricity market agent. Runs on Solvo's side (nightly in production, "Run now" in the demo),
@@ -60,38 +61,16 @@ const OUTPUT_SCHEMA = {
 };
 
 type RawOffer = { supplier: string; product: string; centsPerKwh: number; monthlyFee: number; termMonths?: number; conditions?: string; sourceUrl: string };
-type Grounding = { field: string; citations?: { url: string; title?: string }[]; confidence?: "low" | "medium" | "high" };
-type ExaResponse = {
-  results?: { url: string; title?: string }[];
-  output?: { content?: { offers?: RawOffer[] } | string; grounding?: Grounding[] };
-};
 
-async function exaSearch(pricing: Pricing, key: string) {
-  const res = await fetch("https://api.exa.ai/search", {
-    method: "POST",
-    headers: { "content-type": "application/json", "x-api-key": key },
-    body: JSON.stringify({
-      query: SEARCHES[pricing].query,
-      type: "auto",
-      userLocation: "FI", // Finnish market only
-      objective: SEARCHES[pricing].objective,
-      systemPrompt: SYSTEM_PROMPT,
-      outputSchema: OUTPUT_SCHEMA,
-      contents: { highlights: true },
-    }),
-    signal: AbortSignal.timeout(40_000),
+async function exaSearch(pricing: Pricing) {
+  const { results, items } = await exaStructured<RawOffer>({
+    ...SEARCHES[pricing],
+    systemPrompt: SYSTEM_PROMPT,
+    outputSchema: OUTPUT_SCHEMA,
+    arrayKey: "offers",
+    priceFields: ["centsPerKwh", "monthlyFee"],
   });
-  if (!res.ok) throw new Error(`Exa ${res.status}: ${(await res.text()).slice(0, 160)}`);
-  const data = (await res.json()) as ExaResponse;
-  const content = typeof data.output?.content === "string" ? JSON.parse(data.output.content) : data.output?.content;
-  // An offer is only as good as its price: drop it when Exa rates the price citation as low confidence.
-  const lowConfidence = new Set(
-    (data.output?.grounding ?? [])
-      .filter((g) => g.confidence === "low" && /\.(centsPerKwh|monthlyFee)$/.test(g.field))
-      .map((g) => Number(g.field.match(/offers\[(\d+)\]/)?.[1])),
-  );
-  const offers = ((content?.offers ?? []) as RawOffer[]).map((o, i) => ({ ...o, pricing, lowConfidence: lowConfidence.has(i) }));
-  return { results: data.results ?? [], offers };
+  return { results, offers: items.map((o) => ({ ...o, pricing })) };
 }
 
 /** Plausible consumer prices only. Anything outside these ranges is a misread, not a deal. */
@@ -114,13 +93,13 @@ export async function* runElectricityAgent(): AsyncGenerator<AgentEvent> {
 
   let found: Awaited<ReturnType<typeof exaSearch>>[];
   try {
-    found = await Promise.all((["fixed", "spot"] as const).map((p) => exaSearch(p, key)));
+    found = await Promise.all((["fixed", "spot"] as const).map((p) => exaSearch(p)));
   } catch (e) {
     yield { type: "step", step: "search", status: "failed", detail: "Search failed, using the last saved run" };
     yield fallback(String(e));
     return;
   }
-  const sources = [...new Map(found.flatMap((f) => f.results).map((r) => [r.url, { url: r.url, title: r.title ?? r.url }])).values()];
+  const sources = uniqueSources(found.map((f) => f.results));
   yield { type: "step", step: "search", status: "done", detail: `Found ${sources.length} pages with prices` };
 
   const raw = found.flatMap((f) => f.offers);

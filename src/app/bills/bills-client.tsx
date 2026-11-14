@@ -7,7 +7,7 @@ import { ApproveSheet, DoneView, EditField, OfferOption, ReadFields, SavingSlab,
 import type { Reading } from "@/lib/einvoice";
 import { compare, type ContractTerms } from "@/lib/offers";
 import { SAVED_ELECTRICITY_DB, domainOf, type MarketDb } from "@/lib/market";
-import { compareTelecom } from "@/lib/telecom-offers";
+import { compareTelecom, telecomTermsFrom } from "@/lib/telecom-offers";
 import { approveSwitch, useSavingsPlan, useSwitches, weeklyBoost, type BillKey, type SwitchRecord } from "@/lib/switches";
 import { MarketAgentCard } from "./market-agent-card";
 import { PhotoUpload } from "./photo-upload";
@@ -156,11 +156,7 @@ function FeaturedInvoice({ meta, loaded, onOpen }: { meta: InvoiceMeta; loaded: 
   const isElectricity = r.kind === "electricity_energy";
   const saving = isElectricity
     ? compare(termsFrom(r)).recommended.saving
-    : compareTelecom({
-        lines: r.mobileLines ?? 1,
-        perLine: r.pricePerLine ?? r.monthlyCost,
-        homeInternet: r.homeInternetMonthly ?? 0,
-      }).recommended.saving;
+    : compareTelecom(telecomTermsFrom(r)).recommended.saving;
   const Icon = KIND_ICON[r.kind];
   return (
     <section className="rounded-[24px] bg-card p-5 shadow-[0_1px_3px_rgba(15,42,31,0.06)] ring-1 ring-warn/25">
@@ -354,7 +350,19 @@ function ElectricityDetail(props: { loaded: Loaded; weeklyBudget: number; remain
         </div>
       </Group>
 
-      <MarketAgentCard db={db} segment={cmp.segment} annualKwh={terms.annualKwh} onResult={setDb} />
+      <MarketAgentCard
+        db={db}
+        onResult={setDb}
+        forYou={
+          <>
+            For you it only picks the best of your group,{" "}
+            <span className="font-medium text-foreground">
+              {cmp.segment.label.charAt(0).toLowerCase() + cmp.segment.label.slice(1)}
+            </span>
+            , and prices them at your own {terms.annualKwh.toLocaleString("fi-FI")} kWh.
+          </>
+        }
+      />
 
       <StickyAction onClick={() => setStage("confirm")}>Switch to {chosen.supplier}</StickyAction>
 

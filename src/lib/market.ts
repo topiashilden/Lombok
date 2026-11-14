@@ -3,6 +3,7 @@
 // Per customer, Solvo only looks up their segment and computes the saving at their own consumption.
 // Safe to import from client components (no server-only code here).
 import electricityDb from "@/data/market/electricity.json";
+import telecomDb from "@/data/market/telecom.json";
 
 export type MarketOffer = {
   id: string;
@@ -80,3 +81,52 @@ export const domainOf = (url: string) => {
     return url;
   }
 };
+
+// ---------------------------------------------------------------------------------------------
+// Phone and internet: the telecom market agent stores plans per speed tier.
+
+export type TelecomPlan = {
+  id: string;
+  operator: string;
+  product: string;
+  kind: "mobile" | "home";
+  monthlyPrice: number; // regular price after any campaign, EUR incl. VAT
+  speedMbps: number;
+  conditions: string | null;
+  sourceUrl: string;
+  sourceTitle: string;
+  checkedAt: string;
+};
+
+export type TelecomDb = {
+  agent: "telecom";
+  ranAt: string;
+  mode: "exa" | "seed";
+  queries: string[];
+  pagesRead: number;
+  sources: { url: string; title: string }[];
+  offers: TelecomPlan[];
+  segments: Segment[]; // annualKwh unused (0); one segment per speed tier
+};
+
+export const SAVED_TELECOM_DB = telecomDb as TelecomDb;
+
+export const TELECOM_TIERS = [
+  { id: "mobile-basic", label: "Mobile, up to 300 Mbit/s", kind: "mobile", min: 0, max: 300 },
+  { id: "mobile-mid", label: "Mobile, 400 to 600 Mbit/s", kind: "mobile", min: 301, max: 699 },
+  { id: "mobile-fast", label: "Mobile, 1000 Mbit/s", kind: "mobile", min: 700, max: 1e9 },
+  { id: "home-fast", label: "Home internet, 1000 Mbit/s", kind: "home", min: 700, max: 1e9 },
+] as const;
+
+export function buildTelecomSegments(plans: TelecomPlan[]): Segment[] {
+  return TELECOM_TIERS.map((t) => ({
+    id: t.id,
+    label: t.label,
+    annualKwh: 0,
+    best: plans
+      .filter((p) => p.kind === t.kind && p.speedMbps >= t.min && p.speedMbps <= t.max)
+      .sort((a, b) => a.monthlyPrice - b.monthlyPrice)
+      .slice(0, 3)
+      .map((p) => p.id),
+  }));
+}

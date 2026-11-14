@@ -6,8 +6,9 @@
 import { useState } from "react";
 import { Check, ChevronDown, Globe, Loader2, RefreshCw, X } from "lucide-react";
 import { Chip, secondaryButton } from "@/components/solvo/ui";
-import { domainOf, type MarketDb, type Segment } from "@/lib/market";
-import type { AgentEvent, AgentStep } from "@/lib/market-agent-events";
+import type { ReactNode } from "react";
+import { domainOf } from "@/lib/market";
+import type { AgentDb, AgentEvent, AgentStep } from "@/lib/market-agent-events";
 
 const STEPS: { step: AgentStep; label: string }[] = [
   { step: "search", label: "Search the market" },
@@ -26,19 +27,26 @@ const timeFmt = new Intl.DateTimeFormat("en-GB", {
   timeZone: "Europe/Helsinki",
 });
 
-export function MarketAgentCard(props: { db: MarketDb; segment: Segment; annualKwh: number; onResult: (db: MarketDb) => void }) {
+const NOUN: Record<AgentDb["agent"], { offers: string; sellers: string }> = {
+  electricity: { offers: "offers", sellers: "suppliers" },
+  telecom: { offers: "plans", sellers: "operators" },
+};
+
+/** forYou: what the agent's result means for this customer, e.g. their group and consumption. */
+export function MarketAgentCard<D extends AgentDb>(props: { db: D; forYou: ReactNode; onResult: (db: D) => void }) {
   const { db } = props;
+  const noun = NOUN[db.agent];
   const [steps, setSteps] = useState<Record<AgentStep, StepState> | null>(null);
   const [running, setRunning] = useState(false);
   const [note, setNote] = useState<string | null>(null);
-  const suppliers = new Set(db.offers.map((o) => o.supplier)).size;
+  const sellers = new Set(db.offers.map((o) => ("supplier" in o ? o.supplier : o.operator))).size;
 
   async function run() {
     setRunning(true);
     setNote(null);
     setSteps(Object.fromEntries(STEPS.map((s) => [s.step, { status: "waiting" }])) as Record<AgentStep, StepState>);
     try {
-      const res = await fetch("/api/market-agent", { method: "POST" });
+      const res = await fetch("/api/market-agent", { method: "POST", body: JSON.stringify({ agent: db.agent }) });
       if (!res.body) throw new Error("no stream");
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
@@ -54,7 +62,7 @@ export function MarketAgentCard(props: { db: MarketDb; segment: Segment; annualK
           const e = JSON.parse(line) as AgentEvent;
           if (e.type === "step") setSteps((prev) => (prev ? { ...prev, [e.step]: { status: e.status, detail: e.detail } } : prev));
           else {
-            if (e.live) props.onResult(e.db);
+            if (e.live) props.onResult(e.db as D);
             else setNote(`Showing the saved run from ${timeFmt.format(new Date(e.db.ranAt))}.`);
           }
         }
@@ -77,10 +85,14 @@ export function MarketAgentCard(props: { db: MarketDb; segment: Segment; annualK
       </div>
       <p className="mt-2 text-[14px] leading-snug text-muted-foreground">
         Solvo&apos;s market agent compares prices for everyone, every night. It last checked{" "}
-        <span className="num font-medium text-foreground">{db.offers.length} offers</span> from{" "}
-        <span className="num font-medium text-foreground">{suppliers} suppliers</span> on {db.pagesRead} websites. For you it only
-        picks the best of your group, <span className="font-medium text-foreground">{props.segment.label.charAt(0).toLowerCase() + props.segment.label.slice(1)}</span>, and
-        prices them at your own {props.annualKwh.toLocaleString("fi-FI")} kWh.
+        <span className="num font-medium text-foreground">
+          {db.offers.length} {noun.offers}
+        </span>{" "}
+        from{" "}
+        <span className="num font-medium text-foreground">
+          {sellers} {noun.sellers}
+        </span>{" "}
+        on {db.pagesRead} websites. {props.forYou}
       </p>
 
       {steps && (
@@ -139,8 +151,9 @@ export function MarketAgentCard(props: { db: MarketDb; segment: Segment; annualK
           ))}
         </ul>
         <p className="pb-1 text-[12px] leading-snug text-muted-foreground">
-          Prices are public list prices incl. VAT as shown on these pages. Transmission and electricity tax are billed
-          separately by your grid company. Switching is simulated in this demo.
+          Prices are public list prices incl. VAT as shown on these pages
+          {db.agent === "electricity" ? ". Transmission and electricity tax are billed separately by your grid company" : ""}.
+          Switching is simulated in this demo.
         </p>
       </details>
     </section>

@@ -4,7 +4,9 @@ import { useMemo, useState } from "react";
 import { Group, PageTitle, eur, eur2 } from "@/components/solvo/ui";
 import type { Reading } from "@/lib/einvoice";
 import { approveSwitch, useSavingsPlan, useSwitches, weeklyBoost } from "@/lib/switches";
-import { compareTelecom, TELECOM_OFFERS_UPDATED, type TelecomTerms } from "@/lib/telecom-offers";
+import { compareTelecom, telecomTermsFrom, type TelecomTerms } from "@/lib/telecom-offers";
+import { SAVED_TELECOM_DB, domainOf, type TelecomDb } from "@/lib/market";
+import { MarketAgentCard } from "./market-agent-card";
 import { ApproveSheet, DoneView, EditField, OfferOption, ReadFields, SavingSlab, StickyAction } from "./switch-ui";
 
 const dateFmt = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
@@ -25,12 +27,9 @@ export function TelecomDetail(props: {
   asOf: string;
 }) {
   const r = props.reading;
-  const [terms, setTerms] = useState<TelecomTerms>({
-    lines: r.mobileLines ?? 1,
-    perLine: r.pricePerLine ?? r.monthlyCost,
-    homeInternet: r.homeInternetMonthly ?? 0,
-  });
-  const cmp = useMemo(() => compareTelecom(terms), [terms]);
+  const [terms, setTerms] = useState<TelecomTerms>(() => telecomTermsFrom(r));
+  const [db, setDb] = useState<TelecomDb>(SAVED_TELECOM_DB);
+  const cmp = useMemo(() => compareTelecom(terms, db), [terms, db]);
   const [chosenId, setChosenId] = useState<string | null>(null);
   const chosen = cmp.offers.find((o) => o.id === chosenId) ?? cmp.recommended;
   const [stage, setStage] = useState<"compare" | "confirm" | "done">("compare");
@@ -93,7 +92,7 @@ export function TelecomDetail(props: {
       <Group
         title="Your options for a year"
         aside={`${terms.lines} ${terms.lines === 1 ? "line" : "lines"} + internet`}
-        footer={`Demo offer table, updated ${fmtDate(TELECOM_OFFERS_UPDATED)}. Operators are fictional.`}
+        footer="Real public prices found by Solvo's market agent. Regular prices after any campaign."
       >
         <div role="radiogroup" aria-label="Phone and internet offers">
           {cmp.offers.map((o) => (
@@ -109,13 +108,35 @@ export function TelecomDetail(props: {
                   {eur2.format(o.perLine)}/line ({o.lineSpeed})
                   {o.homeInternet != null ? ` + ${o.homeSpeed} ${eur2.format(o.homeInternet)}` : " + your current home internet"}
                   {o.note ? `. ${o.note}` : ""}
+                  {o.sourceUrl && o.checkedAt && (
+                    <span className="mt-0.5 block">
+                      Source: {domainOf(o.sourceUrl)}, checked {fmtDate(o.checkedAt)}
+                    </span>
+                  )}
                 </>
               }
-              pick={o.id === cmp.recommended.id ? "Coach's pick" : undefined}
+              pick={
+                o.id === cmp.recommended.id
+                  ? o.likeForLike
+                    ? "Coach's pick: same speed, lower price"
+                    : "Coach's pick: fast enough, and you keep the saving"
+                  : undefined
+              }
             />
           ))}
         </div>
       </Group>
+
+      <MarketAgentCard
+        db={db}
+        onResult={setDb}
+        forYou={
+          <>
+            For you it compares plans at every speed for your {terms.lines} {terms.lines === 1 ? "line" : "lines"}, and
+            tells you when a slower plan is still enough.
+          </>
+        }
+      />
 
       <StickyAction onClick={() => setStage("confirm")}>
         {isMatch ? `Ask ${r.supplier} for a better price` : `Switch to ${chosen.operator}`}
