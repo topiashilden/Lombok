@@ -21,6 +21,8 @@ import {
   secondaryButton,
 } from "@/components/solvo/ui";
 import { UNPAID } from "@/data/reminders";
+import { MoneySkills } from "@/components/learn/money-skills";
+import { useLearnProgress } from "@/lib/learn-store";
 import {
   clearCachedReadings,
   resetDemo,
@@ -51,6 +53,7 @@ export function ProfileClient(props: {
   const readCount = Object.keys(useCachedReadings()).length;
   const bills = useBillActions();
   const paid = bills[UNPAID.id]?.action === "paid";
+  const learned = Object.keys(useLearnProgress().done).length > 0;
   const anything =
     switches.length > 0 || !!plan || Object.keys(bills).length > 0;
   const name = mode === "new" ? "New customer" : props.name;
@@ -171,6 +174,8 @@ export function ProfileClient(props: {
         )}
       </Group>
 
+      <MoneySkills />
+
       <Group title="Solvo settings">
         <Row
           icon={
@@ -235,7 +240,7 @@ export function ProfileClient(props: {
         />
       </Group>
 
-      {anything && (
+      {(anything || learned) && (
         <button
           type="button"
           onClick={resetDemo}

@@ -18,6 +18,7 @@ import {
   primaryButton,
 } from "@/components/solvo/ui";
 import { ApproveSheet, DoneView, EditField, OfferOption, ReadFields, SavingSlab, StickyAction } from "./switch-ui";
+import { LearnChip } from "@/components/learn/learn-chip";
 import type { Reading } from "@/lib/einvoice";
 import { compare, type ContractTerms } from "@/lib/offers";
 import { SAVED_ELECTRICITY_DB, domainOf, type MarketDb } from "@/lib/market";
@@ -415,6 +416,9 @@ function ElectricityDetail(props: { loaded: Loaded; weeklyBudget: number; remain
           onChange={set("monthlyFeeAfterEnd")}
         />
       </ReadFields>
+      <LearnChip pack="electricity" className="mt-3 self-start">
+        Learn why: fixed or spot price?
+      </LearnChip>
 
       <MarketAgentCard
         db={db}

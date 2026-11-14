@@ -6,6 +6,7 @@ import { CalendarDays, Landmark, PiggyBank, Receipt, Target, TrendingUp } from "
 import { PortfolioChart } from "@/components/portfolio-chart";
 import { PORTFOLIO_MONTHS, portfolio } from "@/data/portfolio";
 import { ApproveSheet } from "@/app/bills/switch-ui";
+import { LearnChip } from "@/components/learn/learn-chip";
 import { Chip, Group, IconTile, PAGE, PageTitle, Row, Slab, TopBar, eur, primaryButton, secondaryButton } from "@/components/solvo/ui";
 import { FUND_TYPES, FUNDS, FUNDS_SOURCE, fundById, projectFund, type FundType } from "@/lib/funds";
 import { approveSavingsPlan, cancelSavingsPlan, monthlyFreed, useSavingsPlan, useSwitches, weeklyBoost } from "@/lib/switches";
@@ -305,6 +306,9 @@ export function SaveClient(props: Props) {
           </button>
         ))}
       </Group>
+      <LearnChip pack="fees" className="mt-3 self-start">
+        Learn why: how fund fees add up
+      </LearnChip>
 
       <Projection monthly={monthly} fundId={fund.id} />
 

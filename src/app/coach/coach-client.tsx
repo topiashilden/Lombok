@@ -1,11 +1,21 @@
 "use client";
 
-import { ArrowUp, ArrowUpRight, ReceiptText, Sparkles } from "lucide-react";
+import { ArrowUp, ArrowUpRight, Check, GraduationCap, ReceiptText, Sparkles } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { LearnPack } from "@/components/learn/learn-pack";
 import { Group, TopBar, eur } from "@/components/solvo/ui";
+import { PACK_IDS, PACK_META, getPack, packFromText, type LearnContext, type PackId } from "@/lib/learn";
+import { useLearnProgress } from "@/lib/learn-store";
 import type { SpendingResult } from "@/lib/spending";
 
-type Msg = { role: "user" | "coach"; text: string; checks?: SpendingResult[]; source?: "gemini" | "offline"; ms?: number };
+type Msg = {
+  role: "user" | "coach";
+  text: string;
+  checks?: SpendingResult[];
+  source?: "gemini" | "offline";
+  ms?: number;
+  pack?: PackId; // a learning pack, played inside the chat
+};
 
 const SUGGESTIONS = [
   "How much did I spend on taxis?",
@@ -17,16 +27,28 @@ const SUGGESTIONS = [
 const monthFmt = new Intl.DateTimeFormat("en-GB", { month: "short", year: "numeric", timeZone: "UTC" });
 const fmtMonth = (iso: string) => monthFmt.format(new Date(`${iso}T00:00:00Z`));
 
-export function CoachClient() {
+export function CoachClient({ learn }: { learn: LearnContext }) {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const bottom = useRef<HTMLDivElement>(null);
-  const asked = useRef(false);
+  const progress = useLearnProgress();
+
+  function openPack(id: PackId, asked?: string) {
+    const p = getPack(id, learn);
+    setInput("");
+    setMessages((m) => [
+      ...m,
+      { role: "user", text: asked ?? `Teach me: ${p.title}` },
+      { role: "coach", text: p.intro, pack: id },
+    ]);
+  }
 
   async function ask(text: string) {
     const q = text.trim();
     if (!q || busy) return;
+    const packId = packFromText(q);
+    if (packId) return openPack(packId, q);
     const history: Msg[] = [...messages, { role: "user", text: q }];
     setMessages(history);
     setInput("");
@@ -35,7 +57,8 @@ export function CoachClient() {
       const res = await fetch("/api/coach", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ messages: history.map(({ role, text }) => ({ role, text })) }),
+        // Learning packs stay in the browser; the coach only sees the conversation text.
+        body: JSON.stringify({ messages: history.filter((m) => !m.pack).map(({ role, text }) => ({ role, text })) }),
       });
       const d = await res.json();
       setMessages([...history, { role: "coach", text: d.answer ?? "Sorry, something went wrong.", checks: d.checks, source: d.source, ms: d.ms }]);
@@ -46,12 +69,17 @@ export function CoachClient() {
     }
   }
 
-  // A question can arrive from the home page as /coach?q=...
+  // A question can arrive from the home page as /coach?q=..., and a learning pack as /coach?learn=fees.
+  // The page stays mounted (hidden) between visits, so the parameter is removed once handled, and the effect
+  // runs again each time the page is shown.
   useEffect(() => {
-    if (asked.current) return;
-    asked.current = true;
-    const q = new URLSearchParams(window.location.search).get("q");
-    if (q) setTimeout(() => void ask(q), 0);
+    const params = new URLSearchParams(window.location.search);
+    const q = params.get("q");
+    const l = params.get("learn") as PackId | null;
+    if (!q && !l) return;
+    window.history.replaceState(null, "", "/coach");
+    if (l && PACK_IDS.includes(l)) setTimeout(() => openPack(l), 0);
+    else if (q) setTimeout(() => void ask(q), 0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -77,7 +105,34 @@ export function CoachClient() {
                 Answers come from your own S-Pankki transactions. Solvo never moves money without your approval.
               </p>
             </div>
-            <Group title="Try asking" className="mt-0">
+            <Group
+              title="Learn with your own numbers"
+              aside={`${PACK_IDS.filter((id) => progress.done[id]).length} of ${PACK_IDS.length} done`}
+              className="mt-0"
+            >
+              {PACK_META.map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => openPack(p.id)}
+                  className="flex min-h-[56px] w-full items-center gap-3 px-4 py-3 text-left active:bg-muted [&+&]:border-t"
+                >
+                  <span
+                    className={`flex size-9 shrink-0 items-center justify-center rounded-xl ${progress.done[p.id] ? "bg-primary text-white" : "bg-accent text-primary"}`}
+                  >
+                    {progress.done[p.id] ? <Check className="size-[18px]" strokeWidth={2.75} aria-hidden /> : <GraduationCap className="size-[18px]" aria-hidden />}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[15px] leading-snug font-medium">{p.title}</span>
+                    <span className="block text-[13px] text-muted-foreground">
+                      {progress.done[p.id] ? "Done. Tap to go through it again" : `${p.minutes} min, a quiz and your own numbers`}
+                    </span>
+                  </span>
+                  <ArrowUpRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+                </button>
+              ))}
+            </Group>
+            <Group title="Try asking">
               {SUGGESTIONS.map((s) => (
                 <button
                   key={s}
@@ -104,10 +159,14 @@ export function CoachClient() {
               {m.text}
             </div>
           ) : (
-            <div key={i} className="mr-8 flex animate-in fade-in slide-in-from-bottom-2 flex-col gap-2 self-start duration-300">
+            <div
+              key={i}
+              className={`flex animate-in fade-in slide-in-from-bottom-2 flex-col gap-2 duration-300 ${m.pack ? "self-stretch [&>div:first-child]:mr-8 [&>div:first-child]:self-start" : "mr-8 self-start"}`}
+            >
               <div className="rounded-[22px] rounded-bl-md bg-card px-4 py-3 text-[15px] leading-relaxed whitespace-pre-line shadow-[0_1px_3px_rgba(15,42,31,0.06)]">
                 {m.text}
               </div>
+              {m.pack && <LearnPack id={m.pack} ctx={learn} onAsk={(q) => void ask(q)} onOpen={(id) => openPack(id)} />}
               {m.checks?.map((c, j) => (
                 <div
                   key={j}
