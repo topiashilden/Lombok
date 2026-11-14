@@ -1,6 +1,6 @@
 // S-Pankki's own funds (A share class, open to every customer) for the monthly investment plan.
 // Fees are from S-Pankki Rahastoyhtiö's fund price list, valid from 4 June 2026: ongoing charges ("juoksevat kulut",
-// 2025) and the subscription fee. Redemption fee is 0 % for all of these.
+// 2025) and the subscription fee. Redemption fee is 0 % except for the special investment funds (Property & forest).
 // Returns are ILLUSTRATIVE assumptions per fund type, used only for the projection; they are not S-Pankki figures.
 // Solvo doesn't recommend a fund (that would be investment advice): the user picks, and in production the plan
 // would be set up in S-Pankki's own fund service.
