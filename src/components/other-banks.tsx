@@ -1,23 +1,33 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { Check, Landmark, Loader2, Plus, TrendingUp, X } from "lucide-react";
 import { ApproveSheet } from "@/app/bills/switch-ui";
 import { Sheet } from "@/components/solvo/sheet";
 import { Group, IconTile } from "@/components/solvo/ui";
-import { BANK_INFO, writeBanksCookie, type BankId, type View } from "@/lib/banks";
+import { BANK_INFO, PLATFORMS, PLATFORM_HOW, readPlatformCookie, writeBanksCookie, writePlatformCookie, type BankId, type Platform, type View } from "@/lib/banks";
 
 // Other banks: opt-in, never assumed. Nothing shows here unless the person adds a bank. DEMO: adding a bank is simulated and
 // brings example data (src/lib/second-bank.ts). The real connection needs the person's own bank approval and works only for the
 // account owner while the bank API is in restricted mode.
 
-type Step = "closed" | "pick" | "consent" | "waiting";
+type Step = "closed" | "pick" | "platform" | "consent" | "waiting";
+
+// The chosen investing platform lives in a cookie. Read it without a flash: "Nordnet" on the server, the real choice once in the browser.
+const platformEvent = "solvo-platform";
+const subscribePlatform = (cb: () => void) => {
+  window.addEventListener(platformEvent, cb);
+  return () => window.removeEventListener(platformEvent, cb);
+};
+const usePlatform = () => useSyncExternalStore(subscribePlatform, readPlatformCookie, (): Platform => "Nordnet");
 
 export function OtherBanks({ banks, view, compact = false }: { banks: BankId[]; view: View; compact?: boolean }) {
   const router = useRouter();
   const [step, setStep] = useState<Step>("closed");
   const [choice, setChoice] = useState<BankId>("nordea");
+  const platform = usePlatform();
+  const [pickedPlatform, setPickedPlatform] = useState<Platform>("Nordnet");
 
   const save = (next: BankId[]) => {
     writeBanksCookie(next, view);
@@ -32,7 +42,7 @@ export function OtherBanks({ banks, view, compact = false }: { banks: BankId[]; 
   };
   const open = (b: BankId) => {
     setChoice(b);
-    setStep("consent");
+    setStep(b === "nordnet" ? "platform" : "consent");
   };
   const available = (Object.keys(BANK_INFO) as BankId[]).filter((b) => !banks.includes(b));
 
@@ -50,7 +60,7 @@ export function OtherBanks({ banks, view, compact = false }: { banks: BankId[]; 
           <div key={b} className="flex min-h-14 items-center gap-3 py-2 pr-2 pl-4 [&+&]:border-t">
             <IconTile>{BANK_INFO[b].kind === "bank" ? <Landmark /> : <TrendingUp />}</IconTile>
             <div className="min-w-0 flex-1">
-              <div className="text-[15px] leading-snug font-medium">{BANK_INFO[b].name}</div>
+              <div className="text-[15px] leading-snug font-medium">{b === "nordnet" ? platform : BANK_INFO[b].name}</div>
               <div className="mt-0.5 flex items-center gap-1 text-[13px] text-muted-foreground">
                 <Check className="size-3.5 text-primary" aria-hidden />
                 Connected, example data
@@ -58,7 +68,7 @@ export function OtherBanks({ banks, view, compact = false }: { banks: BankId[]; 
             </div>
             <button
               type="button"
-              aria-label={`Remove ${BANK_INFO[b].name}`}
+              aria-label={`Remove ${b === "nordnet" ? platform : BANK_INFO[b].name}`}
               onClick={() => save(banks.filter((x) => x !== b))}
               className="flex size-11 shrink-0 items-center justify-center rounded-full text-muted-foreground active:bg-muted"
             >
@@ -107,24 +117,49 @@ export function OtherBanks({ banks, view, compact = false }: { banks: BankId[]; 
           onCancel={() => setStep("closed")}
         />
       )}
+      {step === "platform" && (
+        <Sheet title="Which platform?" onClose={() => setStep("closed")} hideDone>
+          <div className="overflow-hidden rounded-2xl bg-muted/50">
+            {PLATFORMS.map((p) => (
+              <button
+                key={p}
+                type="button"
+                onClick={() => {
+                  setPickedPlatform(p);
+                  setStep("consent");
+                }}
+                className="flex min-h-14 w-full items-center gap-3 px-4 py-3 text-left [&+&]:border-t"
+              >
+                <IconTile><TrendingUp /></IconTile>
+                <span className="text-[15px] font-medium">{p}</span>
+              </button>
+            ))}
+          </div>
+          <p className="mt-3 text-[13px] leading-snug text-muted-foreground">The one you invest with besides your bank. Demo: any choice shows example holdings.</p>
+        </Sheet>
+      )}
       {step === "consent" && choice === "nordnet" && (
         <ApproveSheet
-          title="Add Nordnet"
+          title={`Add ${pickedPlatform}`}
           points={[
-            "Nordnet has no open banking for investment accounts, so you share an export of your holdings.",
-            "Solvo reads the file and shows your investments next to S-Pankki's. It can't trade.",
-            "Demo: uses an example export.",
+            PLATFORM_HOW[pickedPlatform],
+            "Solvo shows what you hold there next to your S-Pankki funds. It can't trade.",
+            "Demo: shows example holdings.",
           ]}
-          confirmLabel="Use example export"
-          onConfirm={() => connect("nordnet")}
-          onCancel={() => setStep("closed")}
+          confirmLabel="Use example holdings"
+          onConfirm={() => {
+            writePlatformCookie(pickedPlatform);
+            window.dispatchEvent(new Event(platformEvent));
+            connect("nordnet");
+          }}
+          onCancel={() => setStep("platform")}
         />
       )}
       {step === "waiting" && (
-        <Sheet title={choice === "nordea" ? "Nordea ID" : "Reading the export"} onClose={() => {}} hideDone>
+        <Sheet title={choice === "nordea" ? "Nordea ID" : `Reading ${pickedPlatform}`} onClose={() => {}} hideDone>
           <div className="flex items-center gap-3 py-2 text-[15px]" role="status">
             <Loader2 className="size-5 animate-spin" aria-hidden />
-            {choice === "nordea" ? "Waiting for your approval in Nordea ID… (demo: approved automatically)" : "Reading your holdings…"}
+            {choice === "nordea" ? "Waiting for your approval in Nordea ID… (demo: approved automatically)" : "Reading your holdings… (demo: example data)"}
           </div>
         </Sheet>
       )}

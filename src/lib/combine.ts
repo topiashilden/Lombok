@@ -2,7 +2,7 @@
 // rest of the app reads (baskets, income, monthly totals), so Home, the plan, the calendar and the coach all see the full picture.
 // Transfers between her own accounts and deposits to Nordnet are not spending, so they stay out of every basket.
 import type { DemoCustomer } from "@/lib/demo";
-import type { BankId } from "@/lib/banks";
+import type { BankId, Platform } from "@/lib/banks";
 import { syntheticBanks } from "@/lib/second-bank";
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
@@ -70,15 +70,15 @@ export function bankFacts(base: DemoCustomer, banks: BankId[]) {
 }
 
 /** A paragraph for the coach when other banks are connected: what they add and that the numbers already include them. */
-export function banksNoteFor(base: DemoCustomer, banks: BankId[]): string {
+export function banksNoteFor(base: DemoCustomer, banks: BankId[], platform: Platform = "Nordnet"): string {
   const f = bankFacts(base, banks);
   const parts: string[] = [];
   if (f.nordea) {
     const bills = f.nordea.bills.map((b) => `${b.label} ${f.nordea ? "€" + b.monthly : ""}/month (${b.names})`).join("; ");
     parts.push(
-      `Nordea (demo data): everyday account €${f.nordea.everyday}, savings account €${f.nordea.savings}; side income €${f.nordea.sideIncomeMonthly}/month that S-Pankki cannot see; bills paid from Nordea: ${bills}; about €${f.nordea.movedBetweenAccountsMonthly}/month moves between her own accounts and to Nordnet, which is saving, not spending.`,
+      `Nordea (demo data): everyday account €${f.nordea.everyday}, savings account €${f.nordea.savings}; side income €${f.nordea.sideIncomeMonthly}/month that S-Pankki cannot see; bills paid from Nordea: ${bills}; about €${f.nordea.movedBetweenAccountsMonthly}/month moves between her own accounts and to her investing platform (${platform}), which is saving, not spending.`,
     );
   }
-  if (f.nordnet) parts.push(`Nordnet (demo data): invested €${f.nordnet.invested}, worth €${f.nordnet.value}, €${f.nordnet.monthlyDeposit}/month deposits.`);
+  if (f.nordnet) parts.push(`Separate investing platform, ${platform} (demo data): invested €${f.nordnet.invested}, worth €${f.nordnet.value}, €${f.nordnet.monthlyDeposit}/month deposits.`);
   return `\n\nOther banks the customer connected: ${parts.join(" ")} The safe-to-spend, budgets and spending figures above ALREADY include these banks. When it helps, say that an answer covers all her banks, and mention what S-Pankki alone would not show.`;
 }

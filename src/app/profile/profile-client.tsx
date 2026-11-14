@@ -1,5 +1,6 @@
 "use client";
 
+import { LinkedBank } from "@/components/linked-bank";
 import { LiveNordea } from "@/components/live-nordea";
 import { OtherBanks } from "@/components/other-banks";
 import type { BankId, View } from "@/lib/banks";
@@ -53,6 +54,7 @@ export function ProfileClient(props: {
   view: View;
   showBanks: boolean; // hidden once real Nordea data is connected: real data is never merged with the demo banks
   live: LiveStatus; // the real, local-only Nordea connection; renders nothing unless the app runs with SOLVO_LIVE=1
+  linkedBank: { enabled: boolean; linked: { bank: string; validUntil: string } | null; notice: string | null }; // Enable Banking sandbox bank
 }) {
   const router = useRouter();
   const mode = useDemoMode();
@@ -234,6 +236,8 @@ export function ProfileClient(props: {
       )}
 
       <LiveNordea status={props.live} />
+
+      <LinkedBank {...props.linkedBank} />
 
       {props.showBanks && <OtherBanks banks={props.banks} view={props.view} />}
 

@@ -79,14 +79,21 @@ try {
     // The connect page streams, so its status is already 200 when it decides to show "not found": check the content instead.
     const connect = await (await fetch(BASE + "/connect/nordea")).text();
     if (!connect.includes("could not be found") || connect.includes("Connecting Nordea")) throw new Error("/connect/nordea is not hidden");
-    const tries = [
-      fetch(BASE + "/callback?code=x&state=y", { redirect: "manual" }),
-      fetch(BASE + "/api/nordea/start", { method: "POST", headers: { Origin: BASE } }),
-      fetch(BASE + "/api/nordea/sync", { method: "POST", headers: { Origin: BASE } }),
-      fetch(BASE + "/api/nordea/disconnect", { method: "POST", headers: { Origin: BASE } }),
-    ];
-    const statuses = (await Promise.all(tries)).map((r) => r.status);
+    const post = (path) => fetch(BASE + path, { method: "POST", headers: { Origin: BASE } });
+    const statuses = (await Promise.all(["/api/nordea/start", "/api/nordea/sync", "/api/nordea/disconnect"].map(post))).map((r) => r.status);
     if (statuses.some((s) => s !== 404)) throw new Error(`expected only 404, got ${statuses.join(", ")}`);
+  });
+  // The demo bank connection (Enable Banking sandbox) is also off until its test application is configured.
+  await check("demo bank routes are off until configured", async () => {
+    const list = await fetch(BASE + "/api/banks");
+    const start = await fetch(BASE + "/api/banks/start", { method: "POST", headers: { Origin: BASE, "Content-Type": "application/json" }, body: "{}" });
+    if (list.status !== 404 || start.status !== 404) throw new Error(`expected 404, got ${list.status}, ${start.status}`);
+  });
+  // The shared bank callback with a state it never issued goes back to Profile and touches nothing.
+  await check("bank callback refuses an unknown state", async () => {
+    const res = await fetch(BASE + "/callback?code=x&state=y", { redirect: "manual" });
+    const to = res.headers.get("location") ?? "";
+    if (res.status !== 307 || !to.includes("/profile?bank=failed")) throw new Error(`got ${res.status} ${to}`);
   });
   await check("POST /api/coach (offline answer)", async () => {
     const data = await postJson("/api/coach", { messages: [{ role: "user", text: "How much did I spend on restaurants?" }] });
