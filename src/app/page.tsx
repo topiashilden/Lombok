@@ -7,7 +7,7 @@ export default function Home() {
   const c = MAIN_CUSTOMER;
   const baskets = [1, 2, 3] as Basket[];
   return (
-    <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-4 px-4 py-6">
+    <main className="flex flex-1 flex-col gap-4 px-4 pt-[calc(1.5rem+env(safe-area-inset-top))] pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
       <header>
         <h1 className="text-2xl font-semibold tracking-tight">Solvo</h1>
         <p className="text-sm text-muted-foreground">Fixed costs aren&apos;t fixed.</p>
