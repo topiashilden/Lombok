@@ -1,6 +1,7 @@
 // Which customer the home page shows.
 //   default                      the synthetic S-Pankki demo customer (what the public app always uses)
-//   SOLVO_SOURCE=nordea npm run dev   the owner's own Nordea data, from data/private/nordea-customer.json
+//   npm run dev:nordea                the owner's own Nordea data, from data/private/nordea-customer.json
+//                                     bound to 127.0.0.1 only, so other devices on the Wi-Fi cannot reach it.
 //                                     (build it with scripts/nordea-psd2.mjs and scripts/build-nordea-customer.mjs)
 // The private file is gitignored and never exists on Vercel. As a second guard this throws on Vercel.
 import "server-only";
