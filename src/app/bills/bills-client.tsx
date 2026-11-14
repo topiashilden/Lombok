@@ -3,7 +3,7 @@
 import { addTransitionType, startTransition, useEffect, useMemo, useState } from "react";
 import { SubScreen } from "@/components/solvo/screen";
 import { BillHistory, type PaidBill } from "./bill-history";
-import { ArrowRight, Cable, Check, FileText, Smartphone, Sparkles, Zap } from "lucide-react";
+import { ArrowRight, Leaf, Cable, Check, FileText, Smartphone, Sparkles, Zap } from "lucide-react";
 import {
   BackButton,
   Chip,
@@ -19,7 +19,7 @@ import {
 } from "@/components/solvo/ui";
 import { ApproveSheet, DoneView, EditField, OfferOption, ReadFields, SavingSlab, StickyAction } from "./switch-ui";
 import type { Reading } from "@/lib/einvoice";
-import { compare, type ContractTerms } from "@/lib/offers";
+import { compare, type ContractTerms, type ElectricityPreference } from "@/lib/offers";
 import { SAVED_ELECTRICITY_DB, domainOf, type MarketDb } from "@/lib/market";
 import { compareTelecom, telecomTermsFrom } from "@/lib/telecom-offers";
 import {
@@ -34,6 +34,7 @@ import {
   type SwitchRecord,
 } from "@/lib/switches";
 import { MarketAgentCard, agentHasRun } from "./market-agent-card";
+import { PreferencePicker } from "./preference-picker";
 import { PhotoUpload } from "./photo-upload";
 import { TelecomDetail } from "./telecom-detail";
 
@@ -346,7 +347,8 @@ function ElectricityDetail(props: { loaded: Loaded; weeklyBudget: number; remain
     // Bring the saving into view: it appears at the top of the screen.
     setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 600);
   };
-  const cmp = useMemo(() => compare(terms, db), [terms, db]);
+  const [preference, setPreference] = useState<ElectricityPreference>("fixed");
+  const cmp = useMemo(() => compare(terms, db, preference), [terms, db, preference]);
   const [chosenId, setChosenId] = useState<string | null>(null);
   const chosen = cmp.offers.find((o) => o.id === chosenId) ?? cmp.recommended;
   const [stage, setStage] = useState<"compare" | "confirm" | "done">("compare");
@@ -373,6 +375,23 @@ function ElectricityDetail(props: { loaded: Loaded; weeklyBudget: number; remain
             because a fixed cost just got smaller. That&apos;s {eur.format(chosen.saving)} a year.
           </>
         }
+        steps={[
+          { title: "Signed with your bank ID", detail: "You approved the switch in the bank app, so no separate contract to sign." },
+          {
+            title: `Order sent to ${chosen.supplier}`,
+            detail: "Solvo passes the order to the new supplier through a partner interface.",
+          },
+          {
+            title: "Switch registered in Datahub",
+            detail: `${chosen.supplier} registers it in Fingrid's Datahub, which ends your ${r.supplier} contract automatically. Takes about 2 weeks${
+              startDate ? `; a fixed-term contract switches on its end date, ${fmtDate(startDate)}` : ""
+            }.`,
+          },
+          {
+            title: "First new e-invoice checked",
+            detail: `When ${chosen.supplier}'s first e-invoice reaches your bank, Solvo checks the price matches the offer.`,
+          },
+        ]}
         reminder={
           chosen.termMonths && startDate
             ? "Solvo will remind you a month before this contract ends, so it never rolls over to a worse price again."
@@ -433,6 +452,21 @@ function ElectricityDetail(props: { loaded: Loaded; weeklyBudget: number; remain
       />
 
       {ran && (
+        <PreferencePicker
+          value={preference}
+          onChange={(v) => {
+            setPreference(v);
+            setChosenId(null);
+          }}
+          options={[
+            { value: "cheapest", label: "Lowest cost" },
+            { value: "fixed", label: "Fixed price" },
+            { value: "renewable", label: "Renewable", icon: <Leaf className="size-4 shrink-0" aria-hidden /> },
+          ]}
+        />
+      )}
+
+      {ran && (
         <Group
           title="Your options for a year"
           aside={`${terms.annualKwh.toLocaleString("fi-FI")} kWh`}
@@ -454,12 +488,18 @@ function ElectricityDetail(props: { loaded: Loaded; weeklyBudget: number; remain
                     {` + ${dec2(o.monthlyFee)} €/mo`}
                     {o.termMonths ? `, fixed ${o.termMonths} months` : ""}
                     {o.note ? `. ${o.note}` : ""}
+                    {o.renewable && (
+                      <span className="mt-0.5 flex items-center gap-1 font-medium text-primary">
+                        <Leaf className="size-3.5" aria-hidden />
+                        Renewable electricity
+                      </span>
+                    )}
                     <span className="mt-0.5 block">
                       Source: {domainOf(o.sourceUrl)}, checked {fmtDate(o.checkedAt)}
                     </span>
                   </>
                 }
-                pick={o.id === cmp.recommended.id ? "Coach's pick: a fixed price is easier to budget" : undefined}
+                pick={o.id === cmp.recommended.id ? cmp.pickReason : undefined}
               />
             ))}
           </div>
