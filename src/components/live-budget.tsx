@@ -21,10 +21,10 @@ export function SwitchBoostNote({ className }: { className?: string }) {
   const names = Object.values(switches)
     .map((s) => s?.toSupplier)
     .filter(Boolean)
-    .join(" and ");
+    .join(", ");
   return (
     <p className={className}>
-      +{eur.format(boost)}/week from your switch to {names}. Fixed costs aren&apos;t fixed.
+      +{eur.format(boost)}/week from cheaper bills ({names}). Fixed costs aren&apos;t fixed.
     </p>
   );
 }

@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type { Reading } from "@/lib/einvoice";
 import { compare, OFFERS_UPDATED, type ContractTerms } from "@/lib/offers";
-import { approveSwitch, useSwitches, type BillKey } from "@/lib/switches";
+import { approveSwitch, useSwitches, weeklyBoost, type BillKey } from "@/lib/switches";
+import { TelecomDetail } from "./telecom-detail";
 
 type InvoiceMeta = { id: string; payment: { date: string; amount: number } };
 type Loaded = { reading: Reading; source: "gemini" | "saved"; model?: string; ms: number; cached?: boolean };
@@ -59,7 +60,15 @@ export function BillsClient(props: {
         <img src="/solvo-logo.png" alt="Solvo" className="h-5 w-auto" />
       </header>
 
-      {open && openInvoice ? (
+      {open && openInvoice?.reading.kind === "telecom" ? (
+        <TelecomDetail
+          reading={openInvoice.reading}
+          badge={<SourceBadge l={openInvoice} />}
+          weeklyBudget={props.weeklyBudget}
+          remaining={props.remaining}
+          asOf={props.asOf}
+        />
+      ) : open && openInvoice ? (
         <ElectricityDetail
           loaded={openInvoice}
           weeklyBudget={props.weeklyBudget}
@@ -115,7 +124,7 @@ function InvoiceCard({ meta, loaded, onOpen }: { meta: InvoiceMeta; loaded?: Loa
   const r = loaded.reading;
   const key = BILL_KEY[r.kind];
   const switched = key ? switches[key] : undefined;
-  const actionable = r.kind === "electricity_energy" && r.switchable && !switched;
+  const actionable = (r.kind === "electricity_energy" || r.kind === "telecom") && r.switchable && !switched;
   return (
     <Card size="sm" className={actionable ? "ring-amber-300 bg-amber-50" : ""}>
       <CardHeader>
@@ -135,14 +144,16 @@ function InvoiceCard({ meta, loaded, onOpen }: { meta: InvoiceMeta; loaded?: Loa
         </p>
         {switched && (
           <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
-            Switching to {switched.toSupplier} {switched.toProduct}
+            {switched.toProduct === "price match"
+              ? `Price-match request sent to ${switched.toSupplier}`
+              : `Switching to ${switched.toSupplier} ${switched.toProduct}`}
             {switched.startDate ? ` from ${fmtDate(switched.startDate)}` : ""}. You save about{" "}
             {eur.format(switched.yearlySaving)} a year.
           </p>
         )}
         {actionable && (
           <Button className="mt-1 bg-emerald-800 text-white hover:bg-emerald-900" onClick={onOpen}>
-            Compare electricity offers
+            {r.kind === "telecom" ? "Compare phone and internet offers" : "Compare electricity offers"}
           </Button>
         )}
         {r.kind === "electricity_transmission" && (
@@ -150,7 +161,6 @@ function InvoiceCard({ meta, loaded, onOpen }: { meta: InvoiceMeta; loaded?: Loa
             Coach tip: transmission can&apos;t be switched, but cutting your kWh lowers this bill too.
           </p>
         )}
-        {r.kind === "telecom" && <p className="text-xs text-muted-foreground">Phone and internet comparison is coming next.</p>}
       </CardContent>
     </Card>
   );
@@ -192,6 +202,7 @@ function ElectricityDetail(props: { loaded: Loaded; weeklyBudget: number; remain
   const chosen = cmp.offers.find((o) => o.id === chosenId) ?? cmp.recommended;
   const [stage, setStage] = useState<"compare" | "confirm" | "done">("compare");
   const perWeek = chosen.saving / 52;
+  const boost = weeklyBoost(useSwitches()); // all approved switches, including this one once approved
   const startDate = r.contractEndDate ? nextDay(r.contractEndDate) : null;
 
   if (stage === "done") {
@@ -216,12 +227,12 @@ function ElectricityDetail(props: { loaded: Loaded; weeklyBudget: number; remain
           <CardHeader>
             <CardDescription>Safe to spend this week</CardDescription>
             <CardTitle className="flex items-baseline gap-3 text-4xl font-semibold tracking-tight">
-              {eur.format(props.remaining + perWeek)}
+              {eur.format(props.remaining + boost)}
               <span className="text-base font-medium text-emerald-700">+{eur.format(perWeek)}/week</span>
             </CardTitle>
           </CardHeader>
           <CardContent className="text-sm text-muted-foreground">
-            Your weekly budget grows from {eur.format(props.weeklyBudget)} to {eur.format(props.weeklyBudget + perWeek)},
+            Your weekly budget grows from {eur.format(props.weeklyBudget)} to {eur.format(props.weeklyBudget + boost)},
             because a fixed cost just got smaller. Fixed costs aren&apos;t fixed.
           </CardContent>
         </Card>

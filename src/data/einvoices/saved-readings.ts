@@ -19,6 +19,9 @@ export const SAVED_READINGS: Record<string, Reading> = {
     contractEndDate: "2026-10-31",
     priceAfterEndCentsPerKwh: 17.49,
     monthlyFeeAfterEnd: 6.9,
+    mobileLines: null,
+    pricePerLine: null,
+    homeInternetMonthly: null,
     monthlyCost: 110.58,
     switchable: true,
     summary:
@@ -40,6 +43,9 @@ export const SAVED_READINGS: Record<string, Reading> = {
     contractEndDate: null,
     priceAfterEndCentsPerKwh: null,
     monthlyFeeAfterEnd: null,
+    mobileLines: null,
+    pricePerLine: null,
+    homeInternetMonthly: null,
     monthlyCost: 61.99,
     switchable: false,
     summary:
@@ -61,6 +67,9 @@ export const SAVED_READINGS: Record<string, Reading> = {
     contractEndDate: null,
     priceAfterEndCentsPerKwh: null,
     monthlyFeeAfterEnd: null,
+    mobileLines: 2,
+    pricePerLine: 34.96,
+    homeInternetMonthly: 39.99,
     monthlyCost: 109.91,
     switchable: true,
     summary:
