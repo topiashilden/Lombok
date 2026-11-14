@@ -32,7 +32,7 @@ import {
   type BillKey,
   type SwitchRecord,
 } from "@/lib/switches";
-import { MarketAgentCard } from "./market-agent-card";
+import { MarketAgentCard, agentHasRun } from "./market-agent-card";
 import { PhotoUpload } from "./photo-upload";
 import { TelecomDetail } from "./telecom-detail";
 
@@ -245,7 +245,7 @@ function FeaturedInvoice({ meta, loaded, onOpen }: { meta: InvoiceMeta; loaded: 
         </div>
       </div>
 
-      {saving > 0 && (
+      {saving > 0 && agentHasRun(isElectricity ? "electricity" : "telecom") && (
         <p className="mt-4 font-display text-[22px] leading-tight font-semibold tracking-[-0.015em]">
           You could save <span className="num text-primary">{eur.format(saving)}</span> a year
         </p>
@@ -334,6 +334,12 @@ function ElectricityDetail(props: { loaded: Loaded; weeklyBudget: number; remain
     setTerms((t) => ({ ...t, [k]: v ?? (k === "centsAfterEnd" || k === "monthlyFeeAfterEnd" ? null : 0) }));
 
   const [db, setDb] = useState<MarketDb>(SAVED_ELECTRICITY_DB);
+  const [ran, setRan] = useState(() => agentHasRun("electricity")); // offers appear once the agent has run
+  const revealOffers = () => {
+    setRan(true);
+    // Bring the saving into view: it appears at the top of the screen.
+    setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 600);
+  };
   const cmp = useMemo(() => compare(terms, db), [terms, db]);
   const [chosenId, setChosenId] = useState<string | null>(null);
   const chosen = cmp.offers.find((o) => o.id === chosenId) ?? cmp.recommended;
@@ -376,13 +382,15 @@ function ElectricityDetail(props: { loaded: Loaded; weeklyBudget: number; remain
         {r.supplier}, {r.product}. Contract ends {fmtDate(r.contractEndDate)}.
       </PageTitle>
 
-      <SavingSlab
-        label="Switching saves you"
-        saving={chosen.saving}
-        before={{ label: `Do nothing, rolls over ${fmtDate(startDate)}`, yearly: cmp.doNothing }}
-        after={{ label: `${chosen.supplier} ${chosen.product}`, yearly: chosen.yearly }}
-        footnote={<>That&apos;s +{eur.format(Math.max(0, perWeek))} to your safe-to-spend every week.</>}
-      />
+      {ran && (
+        <SavingSlab
+          label="Switching saves you"
+          saving={chosen.saving}
+          before={{ label: `Do nothing, rolls over ${fmtDate(startDate)}`, yearly: cmp.doNothing }}
+          after={{ label: `${chosen.supplier} ${chosen.product}`, yearly: chosen.yearly }}
+          footnote={<>That&apos;s +{eur.format(Math.max(0, perWeek))} to your safe-to-spend every week.</>}
+        />
+      )}
 
       <ReadFields badge={<SourceBadge l={props.loaded} />}>
         <EditField label="Yearly use" value={terms.annualKwh} unit="kWh" step="100" onChange={set("annualKwh")} />
@@ -402,41 +410,10 @@ function ElectricityDetail(props: { loaded: Loaded; weeklyBudget: number; remain
         />
       </ReadFields>
 
-      <Group
-        title="Your options for a year"
-        aside={`${terms.annualKwh.toLocaleString("fi-FI")} kWh`}
-        footer={`Real public prices found by Solvo's market agent, energy only. Your current price would cost ${eur.format(cmp.current)} a year.`}
-      >
-        <div role="radiogroup" aria-label="Electricity offers">
-          {cmp.offers.map((o) => (
-            <OfferOption
-              key={o.id}
-              chosen={o.id === chosen.id}
-              onSelect={() => setChosenId(o.id)}
-              title={`${o.supplier} ${o.product}`}
-              yearly={o.yearly}
-              detail={
-                <>
-                  {o.pricing === "spot"
-                    ? `Spot, about ${o.centsPerKwh.toFixed(2)} c/kWh (margin ${o.marginCents?.toFixed(2)})`
-                    : `${o.centsPerKwh.toFixed(2)} c/kWh`}
-                  {` + ${o.monthlyFee.toFixed(2)} €/mo`}
-                  {o.termMonths ? `, fixed ${o.termMonths} months` : ""}
-                  {o.note ? `. ${o.note}` : ""}
-                  <span className="mt-0.5 block">
-                    Source: {domainOf(o.sourceUrl)}, checked {fmtDate(o.checkedAt)}
-                  </span>
-                </>
-              }
-              pick={o.id === cmp.recommended.id ? "Coach's pick: a fixed price is easier to budget" : undefined}
-            />
-          ))}
-        </div>
-      </Group>
-
       <MarketAgentCard
         db={db}
         onResult={setDb}
+        onFinished={revealOffers}
         shortlist={cmp.offers.map((o) => o.id)}
         forYou={
           <>
@@ -449,7 +426,44 @@ function ElectricityDetail(props: { loaded: Loaded; weeklyBudget: number; remain
         }
       />
 
-      <StickyAction onClick={() => setStage("confirm")}>Switch to {chosen.supplier}</StickyAction>
+      {ran && (
+        <Group
+          title="Your options for a year"
+          aside={`${terms.annualKwh.toLocaleString("fi-FI")} kWh`}
+          footer={`Real public prices found by Solvo's market agent, energy only. Your current price would cost ${eur.format(cmp.current)} a year.`}
+        >
+          <div role="radiogroup" aria-label="Electricity offers">
+            {cmp.offers.map((o) => (
+              <OfferOption
+                key={o.id}
+                chosen={o.id === chosen.id}
+                onSelect={() => setChosenId(o.id)}
+                title={`${o.supplier} ${o.product}`}
+                yearly={o.yearly}
+                detail={
+                  <>
+                    {o.pricing === "spot"
+                      ? `Spot, about ${o.centsPerKwh.toFixed(2)} c/kWh (margin ${o.marginCents?.toFixed(2)})`
+                      : `${o.centsPerKwh.toFixed(2)} c/kWh`}
+                    {` + ${o.monthlyFee.toFixed(2)} €/mo`}
+                    {o.termMonths ? `, fixed ${o.termMonths} months` : ""}
+                    {o.note ? `. ${o.note}` : ""}
+                    <span className="mt-0.5 block">
+                      Source: {domainOf(o.sourceUrl)}, checked {fmtDate(o.checkedAt)}
+                    </span>
+                  </>
+                }
+                pick={o.id === cmp.recommended.id ? "Coach's pick: a fixed price is easier to budget" : undefined}
+              />
+            ))}
+          </div>
+        </Group>
+      )}
+
+
+      {ran && (
+        <StickyAction onClick={() => setStage("confirm")}>Switch to {chosen.supplier}</StickyAction>
+      )}
 
       {stage === "confirm" && (
         <ApproveSheet
