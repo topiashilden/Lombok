@@ -4,172 +4,153 @@ import { SAVED_ELECTRICITY_DB, buildSegments, slug, type MarketDb, type MarketOf
 
 // The electricity market agent. Runs on Solvo's side (nightly in production, "Run now" in the demo),
 // never per customer:
-//   1. search  - Exa finds pages with current Finnish consumer electricity prices
-//   2. read    - Gemini reads those pages into a fixed offer format, with the source page of each offer
-//   3. check   - plausibility rules drop anything that doesn't look like a real consumer price
+//   1. search  - Exa searches the Finnish market, once for fixed-price and once for spot offers
+//   2. read    - Exa's structured output pulls each offer from the pages, with a citation per field
+//   3. check   - plausibility rules and Exa's grounding confidence drop anything that isn't a clear consumer price
 //   4. segment - offers are ranked per customer segment and stored in the market database
-// If a key is missing or any step fails, the caller gets the saved database instead, so the demo never breaks.
+// If the key is missing or any step fails, the caller gets the saved database instead, so the demo never breaks.
+// Exa request shape follows Exa's build-with-exa skill: query + objective + systemPrompt + outputSchema + highlights.
 
 export type { AgentEvent, AgentStep } from "./market-agent-events";
 
-const QUERIES = [
-  "määräaikainen sähkösopimus hinta snt/kWh perusmaksu kuluttaja",
-  "pörssisähkö marginaali snt/kWh perusmaksu €/kk sähköyhtiö",
-  "halvin sähkösopimus vertailu hinnat",
-];
-const MODELS = [process.env.GEMINI_MODEL ?? "gemini-3.5-flash", "gemini-3.5-flash-lite", "gemini-3-flash-preview", "gemini-3.1-flash-lite"];
-const PAGE_CHARS = 6000;
+type Pricing = MarketOffer["pricing"];
 
-type ExaResult = { url: string; title?: string; publishedDate?: string; text?: string };
+const SEARCHES: Record<Pricing, { query: string; objective: string }> = {
+  fixed: {
+    query: "määräaikainen sähkösopimus hinta snt/kWh perusmaksu",
+    objective:
+      "Build a price list of current Finnish consumer fixed-term electricity contracts. Comparison tables and supplier price lists covering several suppliers rank first. Pull supplier, product, energy price in c/kWh incl. VAT, monthly base fee in EUR incl. VAT, and the fixed term in months.",
+  },
+  spot: {
+    query: "pörssisähkö marginaali snt/kWh perusmaksu sähköyhtiöt vertailu",
+    objective:
+      "Build a price list of current Finnish consumer spot-price (pörssisähkö) electricity contracts. Comparison tables and supplier price lists covering several suppliers rank first. Pull supplier, product, the supplier's margin in c/kWh incl. VAT, and the monthly base fee in EUR incl. VAT.",
+  },
+};
 
-async function exaSearch(query: string, key: string): Promise<ExaResult[]> {
-  const res = await fetch("https://api.exa.ai/search", {
-    method: "POST",
-    headers: { "content-type": "application/json", "x-api-key": key },
-    body: JSON.stringify({
-      query,
-      type: "auto",
-      numResults: 5,
-      userLocation: "FI",
-      startPublishedDate: new Date(Date.now() - 120 * 864e5).toISOString(),
-      contents: { text: { maxCharacters: PAGE_CHARS }, livecrawl: "preferred" },
-    }),
-    signal: AbortSignal.timeout(20_000),
-  });
-  if (!res.ok) throw new Error(`Exa ${res.status}: ${(await res.text()).slice(0, 160)}`);
-  const data = (await res.json()) as { results?: ExaResult[] };
-  return (data.results ?? []).filter((r) => r.text && r.text.length > 200);
-}
+const SYSTEM_PROMPT =
+  "Include only consumer (household) offers with an explicit price on the page; skip business (yritys) offers. " +
+  "For spot contracts, centsPerKwh is only the supplier's margin, not the total price. " +
+  "If a price is an introductory price for the first months, report the regular price that applies after it and mention the introductory offer in conditions. " +
+  "conditions is a short English note on limits stated on the page for that offer, such as new customers only, an introductory discount, or a region limit. Omit the field when the page states none; never write that there are none or that terms may vary. " +
+  "product is the product name without the supplier name. " +
+  "Never guess or average a price; omit an offer whose price you cannot verify on the page.";
 
-const OFFER_SCHEMA = {
-  type: "OBJECT",
+const OUTPUT_SCHEMA = {
+  type: "object",
   properties: {
     offers: {
-      type: "ARRAY",
+      type: "array",
       items: {
-        type: "OBJECT",
+        type: "object",
         properties: {
-          supplier: { type: "STRING" },
-          product: { type: "STRING" },
-          pricing: { type: "STRING", enum: ["fixed", "spot"] },
-          centsPerKwh: { type: "NUMBER" },
-          monthlyFee: { type: "NUMBER" },
-          termMonths: { type: "NUMBER", nullable: true },
-          conditions: { type: "STRING", nullable: true },
-          sourceIndex: { type: "NUMBER" },
+          supplier: { type: "string" },
+          product: { type: "string" },
+          centsPerKwh: { type: "number" },
+          monthlyFee: { type: "number" },
+          termMonths: { type: "number" },
+          conditions: { type: "string" },
+          sourceUrl: { type: "string" },
         },
-        required: ["supplier", "product", "pricing", "centsPerKwh", "monthlyFee", "termMonths", "conditions", "sourceIndex"],
+        required: ["supplier", "product", "centsPerKwh", "monthlyFee", "sourceUrl"],
       },
     },
   },
   required: ["offers"],
 };
 
-const READ_PROMPT = `You collect Finnish consumer electricity offers for a price database. Below are web pages, each with an index.
-Extract every concrete consumer electricity offer you can see, one per supplier product:
-- pricing "fixed" for a fixed-term or fixed-price contract (määräaikainen, kiinteä hinta); "spot" for exchange price (pörssisähkö).
-- centsPerKwh: for fixed, the energy price in euro cents per kWh INCLUDING VAT (alv 25.5%); for spot, only the supplier's margin (marginaali) in c/kWh incl. VAT.
-- monthlyFee: the base fee (perusmaksu) in EUR per month incl. VAT.
-- termMonths: the fixed term in months, null for spot or open-ended.
-- conditions: short English note on limits such as "new customers only", "introductory price for 3 months", "only in the Helsinki area", or null.
-- sourceIndex: the index of the page where you saw the offer.
-Only include offers with an explicit price on the page. Never guess or average. Skip business (yritys) offers.`;
+type RawOffer = { supplier: string; product: string; centsPerKwh: number; monthlyFee: number; termMonths?: number; conditions?: string; sourceUrl: string };
+type Grounding = { field: string; citations?: { url: string; title?: string }[]; confidence?: "low" | "medium" | "high" };
+type ExaResponse = {
+  results?: { url: string; title?: string }[];
+  output?: { content?: { offers?: RawOffer[] } | string; grounding?: Grounding[] };
+};
 
-async function geminiRead(pages: ExaResult[], key: string) {
-  const text = pages.map((p, i) => `=== PAGE ${i}: ${p.title ?? ""} (${p.url})\n${p.text}`).join("\n\n");
-  let lastError: unknown;
-  for (const model of MODELS) {
-    try {
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
-        method: "POST",
-        headers: { "content-type": "application/json", "x-goog-api-key": key },
-        body: JSON.stringify({
-          contents: [{ role: "user", parts: [{ text: `${READ_PROMPT}\n\n${text}` }] }],
-          generationConfig: { responseMimeType: "application/json", responseSchema: OFFER_SCHEMA, temperature: 0, thinkingConfig: { thinkingLevel: "low" } },
-        }),
-        signal: AbortSignal.timeout(30_000),
-      });
-      if (!res.ok) throw Object.assign(new Error(`Gemini ${res.status}`), { status: res.status });
-      const data = await res.json();
-      const out: string | undefined = data?.candidates?.[0]?.content?.parts?.find((p: { text?: string }) => p.text)?.text;
-      if (!out) throw new Error("Gemini returned no text");
-      return { model, offers: (JSON.parse(out) as { offers: (Omit<MarketOffer, "id" | "sourceUrl" | "sourceTitle" | "checkedAt"> & { sourceIndex: number })[] }).offers };
-    } catch (e) {
-      lastError = e;
-      const status = (e as { status?: number }).status;
-      if (status !== 429 && status !== 503) break;
-    }
-  }
-  throw lastError;
+async function exaSearch(pricing: Pricing, key: string) {
+  const res = await fetch("https://api.exa.ai/search", {
+    method: "POST",
+    headers: { "content-type": "application/json", "x-api-key": key },
+    body: JSON.stringify({
+      query: SEARCHES[pricing].query,
+      type: "auto",
+      userLocation: "FI", // Finnish market only
+      objective: SEARCHES[pricing].objective,
+      systemPrompt: SYSTEM_PROMPT,
+      outputSchema: OUTPUT_SCHEMA,
+      contents: { highlights: true },
+    }),
+    signal: AbortSignal.timeout(40_000),
+  });
+  if (!res.ok) throw new Error(`Exa ${res.status}: ${(await res.text()).slice(0, 160)}`);
+  const data = (await res.json()) as ExaResponse;
+  const content = typeof data.output?.content === "string" ? JSON.parse(data.output.content) : data.output?.content;
+  // An offer is only as good as its price: drop it when Exa rates the price citation as low confidence.
+  const lowConfidence = new Set(
+    (data.output?.grounding ?? [])
+      .filter((g) => g.confidence === "low" && /\.(centsPerKwh|monthlyFee)$/.test(g.field))
+      .map((g) => Number(g.field.match(/offers\[(\d+)\]/)?.[1])),
+  );
+  const offers = ((content?.offers ?? []) as RawOffer[]).map((o, i) => ({ ...o, pricing, lowConfidence: lowConfidence.has(i) }));
+  return { results: data.results ?? [], offers };
 }
 
 /** Plausible consumer prices only. Anything outside these ranges is a misread, not a deal. */
-function plausible(o: { pricing: string; centsPerKwh: number; monthlyFee: number }) {
+function plausible(o: { pricing: Pricing; centsPerKwh: number; monthlyFee: number }) {
   const cents = o.pricing === "spot" ? o.centsPerKwh >= 0 && o.centsPerKwh <= 3 : o.centsPerKwh >= 4 && o.centsPerKwh <= 30;
   return cents && o.monthlyFee >= 0 && o.monthlyFee <= 15;
 }
 
-
 export async function* runElectricityAgent(): AsyncGenerator<AgentEvent> {
-  const exaKey = process.env.EXA_API_KEY;
-  const geminiKey = process.env.GEMINI_API_KEY;
+  const key = process.env.EXA_API_KEY;
   const saved = SAVED_ELECTRICITY_DB;
   const fallback = (error: string): AgentEvent => ({ type: "result", db: saved, live: false, error });
 
-  yield { type: "step", step: "search", status: "running", detail: `Searching the web: ${QUERIES.length} searches` };
-  if (!exaKey || !geminiKey) {
+  yield { type: "step", step: "search", status: "running", detail: "Searching Finnish electricity prices with Exa" };
+  if (!key) {
     yield { type: "step", step: "search", status: "failed", detail: "Live search is off, using the last saved run" };
-    yield fallback(!exaKey ? "EXA_API_KEY not set" : "GEMINI_API_KEY not set");
+    yield fallback("EXA_API_KEY not set");
     return;
   }
 
-  let pages: ExaResult[];
+  let found: Awaited<ReturnType<typeof exaSearch>>[];
   try {
-    const all = (await Promise.all(QUERIES.map((q) => exaSearch(q, exaKey)))).flat();
-    pages = [...new Map(all.map((p) => [p.url, p])).values()].slice(0, 10);
-    if (!pages.length) throw new Error("no pages found");
+    found = await Promise.all((["fixed", "spot"] as const).map((p) => exaSearch(p, key)));
   } catch (e) {
     yield { type: "step", step: "search", status: "failed", detail: "Search failed, using the last saved run" };
     yield fallback(String(e));
     return;
   }
-  yield { type: "step", step: "search", status: "done", detail: `Found ${pages.length} pages with prices` };
+  const sources = [...new Map(found.flatMap((f) => f.results).map((r) => [r.url, { url: r.url, title: r.title ?? r.url }])).values()];
+  yield { type: "step", step: "search", status: "done", detail: `Found ${sources.length} pages with prices` };
 
-  yield { type: "step", step: "read", status: "running", detail: `Reading ${pages.length} pages with Gemini` };
-  let raw: Awaited<ReturnType<typeof geminiRead>>;
-  try {
-    raw = await geminiRead(pages, geminiKey);
-  } catch (e) {
-    yield { type: "step", step: "read", status: "failed", detail: "AI reading failed, using the last saved run" };
-    yield fallback(String(e));
-    return;
-  }
-  yield { type: "step", step: "read", status: "done", detail: `Pulled out ${raw.offers.length} offers` };
+  const raw = found.flatMap((f) => f.offers);
+  yield { type: "step", step: "read", status: "running", detail: "Reading offers from the pages" };
+  yield { type: "step", step: "read", status: "done", detail: `Pulled out ${raw.length} offers, each with its source` };
 
   yield { type: "step", step: "check", status: "running", detail: "Checking prices and removing duplicates" };
   const today = new Date().toISOString().slice(0, 10);
   const byId = new Map<string, MarketOffer>();
-  for (const o of raw.offers) {
-    const page = pages[o.sourceIndex];
-    if (!page || !plausible(o)) continue;
-    const id = slug(`${o.supplier}-${o.product}`);
+  for (const o of raw) {
+    if (o.lowConfidence || !plausible(o) || !/^https?:\/\//.test(o.sourceUrl)) continue;
+    const product = o.product.replace(new RegExp(`^${o.supplier.split(" ")[0]}\\s+`, "i"), "") || o.product;
+    const id = slug(`${o.supplier}-${product}`);
     if (byId.has(id)) continue; // the first page that lists an offer is its source
     byId.set(id, {
       id,
       supplier: o.supplier,
-      product: o.product,
+      product,
       pricing: o.pricing,
       centsPerKwh: Math.round(o.centsPerKwh * 100) / 100,
       monthlyFee: Math.round(o.monthlyFee * 100) / 100,
-      termMonths: o.pricing === "spot" ? null : o.termMonths,
-      conditions: o.conditions,
-      sourceUrl: page.url,
-      sourceTitle: page.title ?? page.url,
+      termMonths: o.pricing === "spot" ? null : (o.termMonths ?? null),
+      conditions: o.conditions && !/^(none|no (specific )?conditions|standard contract)/i.test(o.conditions) ? o.conditions : null,
+      sourceUrl: o.sourceUrl,
+      sourceTitle: sources.find((s) => s.url === o.sourceUrl)?.title ?? o.sourceUrl,
       checkedAt: today,
     });
   }
   const offers = [...byId.values()];
-  const dropped = raw.offers.length - offers.length;
+  const dropped = raw.length - offers.length;
   if (offers.filter((o) => o.pricing === "fixed").length < 2) {
     yield { type: "step", step: "check", status: "failed", detail: "Too few reliable prices, keeping the last saved run" };
     yield fallback("fewer than 2 fixed offers passed the checks");
@@ -183,9 +164,9 @@ export async function* runElectricityAgent(): AsyncGenerator<AgentEvent> {
     agent: "electricity",
     ranAt: new Date().toISOString(),
     mode: "exa",
-    queries: QUERIES,
-    pagesRead: pages.length,
-    sources: pages.map((p) => ({ url: p.url, title: p.title ?? p.url })),
+    queries: Object.values(SEARCHES).map((s) => s.query),
+    pagesRead: sources.length,
+    sources: sources.filter((s) => offers.some((o) => o.sourceUrl === s.url)),
     spotExpectedAvgCents: saved.spotExpectedAvgCents,
     offers,
     segments: buildSegments(offers, saved.spotExpectedAvgCents),

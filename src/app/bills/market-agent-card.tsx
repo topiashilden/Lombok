@@ -11,7 +11,7 @@ import type { AgentEvent, AgentStep } from "@/lib/market-agent-events";
 
 const STEPS: { step: AgentStep; label: string }[] = [
   { step: "search", label: "Search the market" },
-  { step: "read", label: "Read prices with AI" },
+  { step: "read", label: "Read prices from the pages" },
   { step: "check", label: "Check and clean" },
   { step: "segment", label: "Rank per customer group" },
 ];
