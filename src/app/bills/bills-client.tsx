@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { ArrowRight, Cable, Check, FileText, Smartphone, Sparkles, Zap } from "lucide-react";
-import { BackButton, BackLink, Chip, Group, IconTile, PAGE, PageTitle, TopBar, eur, eur2, primaryButton } from "@/components/solvo/ui";
+import { BackButton, Chip, Group, IconTile, PAGE, PageTitle, TopBar, eur, eur2, primaryButton } from "@/components/solvo/ui";
 import { ApproveSheet, DoneView, EditField, OfferOption, ReadFields, SavingSlab, StickyAction } from "./switch-ui";
 import type { Reading } from "@/lib/einvoice";
 import { compare, OFFERS_UPDATED, type ContractTerms } from "@/lib/offers";
@@ -73,7 +73,7 @@ export function BillsClient(props: {
 
   return (
     <main className={PAGE}>
-      <TopBar back={open ? <BackButton onClick={() => setOpen(null)} label="Bills" /> : <BackLink href="/" label="Home" />} />
+      <TopBar back={open ? <BackButton onClick={() => setOpen(null)} label="Bills" /> : undefined} />
 
       {open && openInvoice?.reading.kind === "telecom" ? (
         <TelecomDetail

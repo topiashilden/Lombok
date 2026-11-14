@@ -8,7 +8,7 @@ export const eur = new Intl.NumberFormat("fi-FI", { style: "currency", currency:
 export const eur2 = new Intl.NumberFormat("fi-FI", { style: "currency", currency: "EUR", minimumFractionDigits: 2 });
 
 /** Page padding that respects the notch and home bar. */
-export const PAGE = "flex flex-1 flex-col px-4 pt-[calc(0.75rem+env(safe-area-inset-top))] pb-[calc(2rem+env(safe-area-inset-bottom))]";
+export const PAGE = "flex flex-1 flex-col px-4 pt-[calc(0.75rem+env(safe-area-inset-top))] pb-[calc(2rem+var(--tabbar-h))]";
 
 export function Logo({ className }: { className?: string }) {
   // eslint-disable-next-line @next/next/no-img-element
