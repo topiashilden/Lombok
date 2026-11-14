@@ -74,6 +74,18 @@ try {
       if (last.type !== "result" || !last.db?.offers?.length) throw new Error(`${agent}: unexpected last event: ${JSON.stringify(last).slice(0, 200)}`);
     }
   });
+  // The public app must show nothing of the live Nordea connection: every route is a 404 unless SOLVO_LIVE=1 (local only).
+  await check("live Nordea routes are off by default", async () => {
+    const tries = [
+      fetch(BASE + "/callback?code=x&state=y", { redirect: "manual" }),
+      fetch(BASE + "/connect/nordea"),
+      fetch(BASE + "/api/nordea/start", { method: "POST", headers: { Origin: BASE } }),
+      fetch(BASE + "/api/nordea/sync", { method: "POST", headers: { Origin: BASE } }),
+      fetch(BASE + "/api/nordea/disconnect", { method: "POST", headers: { Origin: BASE } }),
+    ];
+    const statuses = (await Promise.all(tries)).map((r) => r.status);
+    if (statuses.some((s) => s !== 404)) throw new Error(`expected only 404, got ${statuses.join(", ")}`);
+  });
   await check("POST /api/coach (offline answer)", async () => {
     const data = await postJson("/api/coach", { messages: [{ role: "user", text: "How much did I spend on restaurants?" }] });
     if (typeof data.answer !== "string" || !data.answer) throw new Error(`unexpected response: ${JSON.stringify(data).slice(0, 200)}`);

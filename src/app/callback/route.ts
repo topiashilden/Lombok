@@ -1,6 +1,6 @@
 import { timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
-import { NextResponse } from "next/server";
+import { NextResponse, connection } from "next/server";
 import { STATE_COOKIE, completeConsent, guard } from "@/lib/live-nordea";
 import { originOf } from "@/lib/loopback";
 
@@ -10,6 +10,7 @@ import { originOf } from "@/lib/loopback";
 const same = (a: string, b: string) => a.length === b.length && timingSafeEqual(Buffer.from(a), Buffer.from(b));
 
 export async function GET(req: Request) {
+  await connection(); // always per request, never prerendered at build time
   const refused = guard(req);
   if (refused) return refused;
 
