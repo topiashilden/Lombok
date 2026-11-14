@@ -53,6 +53,7 @@ export function ProfileClient(props: {
   view: View;
   showBanks: boolean; // hidden once real Nordea data is connected: real data is never merged with the demo banks
   live: LiveStatus; // the real, local-only Nordea connection; renders nothing unless the app runs with SOLVO_LIVE=1
+  linkedBank: { enabled: boolean; linked: { bank: string; validUntil: string } | null; notice: string | null }; // Enable Banking sandbox bank
 }) {
   const router = useRouter();
   const mode = useDemoMode();
@@ -235,7 +236,7 @@ export function ProfileClient(props: {
 
       <LiveNordea status={props.live} />
 
-      {props.showBanks && <OtherBanks banks={props.banks} view={props.view} />}
+      {(props.showBanks || props.linkedBank.enabled) && <OtherBanks banks={props.showBanks ? props.banks : []} view={props.view} sandbox={props.linkedBank} live={props.live} />}
 
       <Group
         title="Your data"

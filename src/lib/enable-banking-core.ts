@@ -8,7 +8,8 @@ import { createSign } from "node:crypto";
 import { readFileSync } from "node:fs";
 import type { RawTx } from "./nordea-customer"; // type only: erased, so Node never loads it
 
-export type EbConfig = { appId: string; keyPath: string; apiUrl: string };
+/** The private key is read from `keyPath` (a .pem outside the repo) or given as `privateKey` text (a hosting environment variable). */
+export type EbConfig = { appId: string; keyPath?: string; privateKey?: string; apiUrl: string };
 export type EbSession = {
   session_id?: string;
   accounts?: { uid: string }[];
@@ -31,13 +32,22 @@ export function configFromEnv(env: Record<string, string | undefined>): EbConfig
   return { appId, keyPath, apiUrl: env.ENABLE_API_URL ?? "https://api.enablebanking.com" };
 }
 
+/** A SANDBOX application (Enable Banking's test environment: a mock bank, example data). Separate from the production one on purpose. */
+export function sandboxConfigFromEnv(env: Record<string, string | undefined>): EbConfig | null {
+  const appId = env.ENABLE_SANDBOX_APP_ID;
+  const key = env.ENABLE_SANDBOX_KEY;
+  if (!appId || !key) return null;
+  // Hosting dashboards often store the PEM on one line with literal \n.
+  return { appId, privateKey: key.replace(/\\n/g, "\n"), apiUrl: env.ENABLE_API_URL ?? "https://api.enablebanking.com" };
+}
+
 const b64url = (b: string | Buffer) => Buffer.from(b).toString("base64url");
 
 export function makeJwt(cfg: EbConfig): string {
   const now = Math.floor(Date.now() / 1000);
   const head = b64url(JSON.stringify({ typ: "JWT", alg: "RS256", kid: cfg.appId }));
   const body = b64url(JSON.stringify({ iss: "enablebanking.com", aud: "api.enablebanking.com", iat: now, exp: now + 3600 }));
-  const sig = createSign("RSA-SHA256").update(`${head}.${body}`).sign(readFileSync(cfg.keyPath, "utf8"));
+  const sig = createSign("RSA-SHA256").update(`${head}.${body}`).sign(cfg.privateKey ?? readFileSync(cfg.keyPath as string, "utf8"));
   return `${head}.${body}.${b64url(sig)}`;
 }
 
@@ -73,6 +83,21 @@ async function call<T>(cfg: EbConfig, method: string, path: string, { query, bod
 /** Checks the key and the application. Returns names and flags only. */
 export const appStatus = (cfg: EbConfig) =>
   call<{ name?: string; active?: boolean; environment?: string; countries?: string[] }>(cfg, "GET", "/application");
+
+export type AspspSummary = { name: string; country: string; logo?: string };
+
+/** The banks a person can connect, from Enable Banking's own list (what the bank picker shows). Personal accounts only. */
+export async function listAspsps(cfg: EbConfig, country: string): Promise<AspspSummary[]> {
+  const d = await call<{ aspsps?: { name: string; country: string; logo?: string; psu_types?: string[] }[] }>(cfg, "GET", "/aspsps", { query: { country } });
+  return (d.aspsps ?? [])
+    .filter((a) => !a.psu_types || a.psu_types.includes("personal"))
+    .map((a) => ({ name: a.name, country: a.country, logo: a.logo }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+export type EbBalance = { name?: string; balance_type?: string; balance_amount: { amount: string; currency: string } };
+export const fetchBalances = async (cfg: EbConfig, uid: string) =>
+  (await call<{ balances?: EbBalance[] }>(cfg, "GET", `/accounts/${encodeURIComponent(uid)}/balances`)).balances ?? [];
 
 /** Starts a consent. The person opens `url`, approves with the bank's own ID, and lands on `redirectUrl` with ?code=&state=. */
 export const startAuth = (cfg: EbConfig, o: { bank: string; country: string; state: string; redirectUrl: string; validDays: number }) =>

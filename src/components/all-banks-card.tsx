@@ -3,7 +3,7 @@ import { ViewToggle } from "@/components/view-toggle";
 import { MoneyBadge, SignedAmount } from "@/components/solvo/money-badge";
 import { Group, IconTile, Row, eur } from "@/components/solvo/ui";
 import { bankFacts } from "@/lib/combine";
-import type { BankId, View } from "@/lib/banks";
+import type { BankId, Platform, View } from "@/lib/banks";
 import type { DemoCustomer } from "@/lib/demo";
 import { portfolio } from "@/data/portfolio";
 
@@ -11,7 +11,7 @@ import { portfolio } from "@/data/portfolio";
  * Home, only once another bank is connected: the whole money picture across banks, and what the other bank adds that S-Pankki
  * alone cannot see. DEMO data for the second bank and Nordnet (src/lib/second-bank.ts).
  */
-export function AllBanksCard({ base, banks, view }: { base: DemoCustomer; banks: BankId[]; view: View }) {
+export function AllBanksCard({ base, banks, view, platform = "Nordnet", bankName = "Nordea" }: { base: DemoCustomer; banks: BankId[]; view: View; platform?: Platform; bankName?: string }) {
   if (!banks.length) return null;
   const f = bankFacts(base, banks);
   const funds = Math.round(portfolio().value);
@@ -21,7 +21,7 @@ export function AllBanksCard({ base, banks, view }: { base: DemoCustomer; banks:
   const insurance = f.nordea?.bills.find((b) => b.label === "Insurance");
 
   return (
-    <Group title="All your banks" className="mt-4" footer="Demo: example data for the connected banks. Transfers between your own accounts are not counted as spending.">
+    <Group title="All your banks" className="mt-4" footer="Demo: example data for the connected banks and investing platform. Transfers between your own accounts are not counted as spending.">
       <div className="p-3">
         <ViewToggle banks={banks} view={view} />
       </div>
@@ -30,17 +30,17 @@ export function AllBanksCard({ base, banks, view }: { base: DemoCustomer; banks:
           <Row
             icon={<IconTile><Landmark /></IconTile>}
             title="Cash and savings"
-            subtitle={`S-Pankki ${eur.format(f.spankki.cash)}${f.nordea ? ` · Nordea ${eur.format(f.nordea.everyday + f.nordea.savings)}` : ""}`}
+            subtitle={`S-Pankki ${eur.format(f.spankki.cash)}${f.nordea ? ` · ${bankName} ${eur.format(f.nordea.everyday + f.nordea.savings)}` : ""}`}
             value={eur.format(cash)}
           />
           <Row
             icon={<IconTile><TrendingUp /></IconTile>}
             title="Investments"
-            subtitle={`S-Pankki funds ${eur.format(funds)}${f.nordnet ? ` · Nordnet ${eur.format(Math.round(f.nordnet.value))}` : ""}`}
+            subtitle={`S-Pankki funds ${eur.format(funds)}${f.nordnet ? ` · ${platform} ${eur.format(Math.round(f.nordnet.value))}` : ""}`}
             value={eur.format(invested)}
           />
           {f.nordea && f.nordea.sideIncomeMonthly > 0 && (
-            <Row icon={<MoneyBadge kind="in" />} title="Side income at Nordea" subtitle="S-Pankki can't see this" value={<SignedAmount kind="in" value={f.nordea.sideIncomeMonthly} />} valueSub="a month" />
+            <Row icon={<MoneyBadge kind="in" />} title={`Side income at ${bankName}`} subtitle="S-Pankki can't see this" value={<SignedAmount kind="in" value={f.nordea.sideIncomeMonthly} />} valueSub="a month" />
           )}
           {subs && (
             <Row icon={<IconTile><Repeat /></IconTile>} title="Subscriptions" subtitle={subs.names} value={<SignedAmount kind="out" value={subs.monthly} />} valueSub="a month" />
@@ -52,7 +52,7 @@ export function AllBanksCard({ base, banks, view }: { base: DemoCustomer; banks:
             <Row
               icon={<IconTile tone="grey"><PiggyBank /></IconTile>}
               title="Moved between your accounts"
-              subtitle="To savings and to Nordnet. Saving, not spending."
+              subtitle={`To savings and to ${platform}. Saving, not spending.`}
               value={eur.format(f.nordea.movedBetweenAccountsMonthly)}
               valueSub="a month"
             />
