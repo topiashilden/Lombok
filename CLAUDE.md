@@ -50,7 +50,7 @@ Cloned from https://github.com/hackjunction/Junction-2026-S-pankki into `data/s-
 - Chat: message list scrolls, input stays attached to the visible viewport above the keyboard. Test on a real iPhone; the Simulator is not available (no full Xcode on this Mac).
 - Audio (ElevenLabs) must start from a tap on iOS. No haptics on iOS Safari.
 - Never import `src/lib/demo.ts` from a client component (it is `server-only`; the build fails if you do). Compute on the server and pass small props.
-- Installable: `src/app/manifest.ts`, icons in `public/icons/` and `src/app/apple-icon.png`. iPhone installs via Share, Add to Home Screen only (no prompt). The icon is a placeholder.
+- Installable: `src/app/manifest.ts`, icons in `public/icons/` and `src/app/apple-icon.png`. iPhone installs via Share, Add to Home Screen only (no prompt). Icon: white S from the logo with a mint bar on the slab green (#0c3524).
 
 ## Rules
 - Keep `main` deployable. Small commits, clear messages.
