@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { LiveWeeklyEuro, ResetDemoButton, SwitchBoostNote } from "@/components/live-budget";
+import { OverdueBillCard } from "@/components/overdue-bill";
 import { safeToSpend, topCategories, unknownBills } from "@/lib/coach";
 import { BASKET_LABELS, MAIN_CUSTOMER, type Basket } from "@/lib/demo";
 
@@ -54,6 +55,8 @@ export default function Home() {
           <SwitchBoostNote className="text-sm font-medium text-emerald-300" />
         </CardContent>
       </Card>
+
+      <OverdueBillCard asOf={c.asOf} />
 
       {/* Coach chat entry */}
       <div className="flex flex-col gap-2">

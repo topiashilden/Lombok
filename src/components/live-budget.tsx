@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { resetDemo, useSavingsPlan, useSwitches, weeklyBoost } from "@/lib/switches";
+import { resetDemo, useBillActions, useSavingsPlan, useSwitches, weeklyBoost } from "@/lib/switches";
 
 // Small client islands for the server-rendered home page: they add the effect of approved switches
 // to the safe-to-spend numbers without moving the page's layout into the client.
@@ -42,7 +42,8 @@ export function SwitchBoostNote({ className }: { className?: string }) {
 export function ResetDemoButton({ className }: { className?: string }) {
   const switches = useSwitches();
   const plan = useSavingsPlan();
-  if (!Object.keys(switches).length && !plan) return null;
+  const bills = useBillActions();
+  if (!Object.keys(switches).length && !plan && !Object.keys(bills).length) return null;
   return (
     <button type="button" className={className} onClick={resetDemo}>
       Reset demo

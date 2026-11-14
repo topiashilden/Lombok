@@ -76,6 +76,10 @@ function createStore<T extends object>(key: string, empty: T) {
 const NO_SWITCHES: Switches = {};
 const NO_PLAN = {} as Partial<SavingsPlan>;
 const switchStore = createStore<Switches>("solvo.switches.v1", NO_SWITCHES);
+// Unpaid bills the user has dealt with: paid, or asked to be reminded later.
+export type BillAction = { action: "paid" | "snoozed"; at: string };
+const NO_ACTIONS: Record<string, BillAction> = {};
+const billStore = createStore<Record<string, BillAction>>("solvo.bill-actions.v1", NO_ACTIONS);
 const planStore = createStore<Partial<SavingsPlan>>("solvo.savings-plan.v1", NO_PLAN);
 
 export const useSwitches = switchStore.use;
@@ -83,6 +87,12 @@ export const useSwitches = switchStore.use;
 export function useSavingsPlan(): SavingsPlan | null {
   const p = planStore.use();
   return p.monthly ? (p as SavingsPlan) : null;
+}
+
+export const useBillActions = billStore.use;
+
+export function setBillAction(billId: string, action: BillAction["action"]) {
+  billStore.set({ ...billStore.snapshot(), [billId]: { action, at: new Date().toISOString() } });
 }
 
 export function approveSwitch(rec: SwitchRecord) {
@@ -96,6 +106,7 @@ export function approveSavingsPlan(plan: SavingsPlan) {
 export function resetDemo() {
   switchStore.set(null);
   planStore.set(null);
+  billStore.set(null);
 }
 
 export const WEEKS_PER_YEAR = 52;
