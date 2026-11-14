@@ -153,3 +153,14 @@ export function eventsForMonth(items: Item[], custom: CustomEvent[], year: numbe
   }
   return out.sort((a, b) => a.date.localeCompare(b.date) || (a.kind === b.kind ? 0 : a.kind === "in" ? -1 : 1));
 }
+
+/** What is coming up in the next `days` days, today included, soonest first. Looks across a month boundary. */
+export function upcomingEvents(items: Item[], custom: CustomEvent[], asOf: string, days = 14, limit = 4): DayEvent[] {
+  const start = new Date(`${asOf}T00:00:00Z`);
+  const end = new Date(start.getTime() + days * 86400000).toISOString().slice(0, 10);
+  const months = new Set<string>();
+  for (let t = start.getTime(); t <= start.getTime() + days * 86400000; t += 86400000) months.add(new Date(t).toISOString().slice(0, 7));
+  const out: DayEvent[] = [];
+  for (const m of months) out.push(...eventsForMonth(items, custom, Number(m.slice(0, 4)), Number(m.slice(5, 7)) - 1));
+  return out.filter((e) => e.date >= asOf && e.date <= end).sort((a, b) => a.date.localeCompare(b.date)).slice(0, limit);
+}

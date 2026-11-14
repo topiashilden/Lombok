@@ -2,10 +2,12 @@ import Link from "next/link";
 import { ArrowRight, CalendarDays, MessageCircle, ReceiptText } from "lucide-react";
 import { LiveWeeklyEuro, ResetDemoButton, SwitchBoostNote } from "@/components/live-budget";
 import { OnboardingGate, PlanCard } from "@/components/onboarding-home";
+import { UpcomingCard } from "@/components/upcoming-card";
 import { OverdueBillCard } from "@/components/overdue-bill";
 import { Chip, Group, IconTile, Logo, PAGE, Row, Slab, eur, primaryButton } from "@/components/solvo/ui";
 import { safeToSpend, topCategories, unknownBills } from "@/lib/coach";
 import { BASKET_LABELS, type Basket } from "@/lib/demo";
+import { inferSchedule } from "@/lib/schedule";
 import { getSource } from "@/lib/source";
 
 const dateFmt = new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
@@ -17,6 +19,7 @@ const BASKET_COLOR: Record<Basket, string> = { 1: "bg-chart-1", 2: "bg-chart-2",
 export default function Home() {
   const { customer: c, local } = getSource();
   const s = safeToSpend(c);
+  const schedule = inferSchedule(c);
   const bills = unknownBills(c);
   const baskets = [1, 2, 3] as Basket[];
   const yearTotal = baskets.reduce((sum, b) => sum + c.summary.basketYear[b], 0);
@@ -92,6 +95,8 @@ export default function Home() {
       <OverdueBillCard asOf={c.asOf} />
 
       <PlanCard />
+
+      <UpcomingCard items={schedule.items} asOf={c.asOf} />
 
       {/* The bank's blind spot, and Solvo's hook */}
       <section className="mt-4 rounded-[24px] bg-card p-5 shadow-[0_1px_3px_rgba(15,42,31,0.06)]">
