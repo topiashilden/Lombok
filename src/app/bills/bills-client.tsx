@@ -8,7 +8,7 @@ import type { Reading } from "@/lib/einvoice";
 import { compare, type ContractTerms } from "@/lib/offers";
 import { SAVED_ELECTRICITY_DB, domainOf, type MarketDb } from "@/lib/market";
 import { compareTelecom, telecomTermsFrom } from "@/lib/telecom-offers";
-import { approveSwitch, useSavingsPlan, useSwitches, weeklyBoost, type BillKey, type SwitchRecord } from "@/lib/switches";
+import { approveSwitch, cacheReading, readCachedReadings, useCachedReadings, useSavingsPlan, useSwitches, weeklyBoost, type BillKey, type SwitchRecord } from "@/lib/switches";
 import { MarketAgentCard } from "./market-agent-card";
 import { PhotoUpload } from "./photo-upload";
 import { TelecomDetail } from "./telecom-detail";
@@ -49,16 +49,31 @@ export function BillsClient(props: {
   weeklyBudget: number;
   remaining: number;
 }) {
-  const [loaded, setLoaded] = useState<Record<string, Loaded>>({});
+  const [fetched, setLoaded] = useState<Record<string, Loaded>>({});
+  const stored = useCachedReadings() as Record<string, Loaded>;
+  // Readings from this visit win (they carry the reading time); earlier ones come from the device cache.
+  const loaded = useMemo(() => {
+    const fromCache = Object.fromEntries(Object.entries(stored).map(([id, l]) => [id, { ...l, cached: true }]));
+    return { ...fromCache, ...fetched };
+  }, [stored, fetched]);
   const [open, setOpen] = useState<string | null>(null);
   const [photos, setPhotos] = useState<InvoiceMeta[]>([]);
   const switches = useSwitches();
 
+  // Each e-invoice is read by Gemini once per device and kept in localStorage; later visits are instant and make
+  // no Gemini call. Profile has "Read e-invoices again" for the demo. Saved fallback readings aren't cached, so
+  // Gemini gets another try next time.
   useEffect(() => {
+    const cached = readCachedReadings();
     for (const inv of props.invoices) {
+      if (cached[inv.id]) continue;
       fetch("/api/read-invoice", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id: inv.id }) })
         .then((r) => r.json())
-        .then((d: Loaded) => setLoaded((prev) => ({ ...prev, [inv.id]: d })))
+        .then((d: Loaded) => {
+          if (!d.reading) return;
+          if (d.source === "gemini") cacheReading(inv.id, d);
+          setLoaded((prev) => ({ ...prev, [inv.id]: d }));
+        })
         .catch(() => {});
     }
   }, [props.invoices]);
