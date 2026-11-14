@@ -2,6 +2,7 @@
 
 import { useSyncExternalStore } from "react";
 import { resetCalendar } from "@/lib/calendar-store";
+import { resetLearn } from "@/lib/learn-store";
 import { resetOnboarding } from "@/lib/onboarding-store";
 import { DEMO_COOKIE, type DemoMode } from "@/lib/demo-mode";
 
@@ -161,6 +162,7 @@ export function resetDemo() {
   billStore.set(null);
   resetOnboarding();
   resetCalendar();
+  resetLearn();
 }
 
 export const WEEKS_PER_YEAR = 52;

@@ -6,6 +6,7 @@ import { LiveWeeklyEuro, ResetDemoButton, SwitchBoostNote } from "@/components/l
 import { OnboardingGate, PlanCard } from "@/components/onboarding-home";
 import { OverdueBillCard } from "@/components/overdue-bill";
 import { UpcomingCard } from "@/components/upcoming-card";
+import { LearnChip } from "@/components/learn/learn-chip";
 import { Chip, Group, IconTile, Logo, PAGE, Row, Slab, eur, primaryButton } from "@/components/solvo/ui";
 import { safeToSpend, topCategories, unknownBills } from "@/lib/coach";
 import { BASKET_LABELS, type Basket } from "@/lib/demo";
@@ -102,6 +103,9 @@ async function HomeScreen() {
             {eur.format(s.spentThisWeek)} spent since {fmtDate(s.weekStart)}
           </p>
           <SwitchBoostNote className="mt-2 text-[13px] font-semibold text-mint" />
+          <LearnChip pack="buffer" tone="dark" className="mt-3 -mb-1">
+            Learn: how big a safety buffer?
+          </LearnChip>
         </Slab>
 
         {/* The dentist e-invoice and its call are part of Aino's demo story only. */}
