@@ -3,10 +3,10 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { CALL_AUDIO, CALL_SCRIPT, UNPAID } from "@/data/reminders";
+import { ApproveSheet } from "@/app/bills/switch-ui";
+import { BackLink, Group, PAGE, PageTitle, Row, Slab, TopBar, eur, eur2, primaryButton, secondaryButton } from "@/components/solvo/ui";
 import { setBillAction, useBillActions } from "@/lib/switches";
 
-const eur = new Intl.NumberFormat("fi-FI", { style: "currency", currency: "EUR", maximumFractionDigits: 0 });
-const eur2 = new Intl.NumberFormat("fi-FI", { style: "currency", currency: "EUR", minimumFractionDigits: 2 });
 const dateFmt = new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
 const fmtDate = (iso: string) => dateFmt.format(new Date(`${iso}T00:00:00Z`));
 
@@ -87,25 +87,25 @@ export function CallClient() {
 
   if (stage === "ringing" || stage === "talking") {
     return (
-      <main className="flex min-h-dvh flex-col items-center justify-between bg-emerald-950 px-6 pt-[calc(4rem+env(safe-area-inset-top))] pb-[calc(3rem+env(safe-area-inset-bottom))] text-emerald-50">
+      <main className="flex min-h-dvh flex-col items-center justify-between bg-slab px-6 pt-[calc(4rem+env(safe-area-inset-top))] pb-[calc(3rem+env(safe-area-inset-bottom))] text-white">
         <div className="flex flex-col items-center gap-3 text-center">
-          <div className={`flex size-24 items-center justify-center rounded-full bg-emerald-50 ${stage === "ringing" ? "animate-pulse" : ""}`}>
+          <div className={`flex size-24 items-center justify-center rounded-full bg-white ${stage === "ringing" ? "animate-pulse" : ""}`}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/solvo-logo.png" alt="" className="w-16" />
           </div>
           <p className="text-3xl font-semibold">Solvo</p>
-          <p className="text-sm text-emerald-200">
+          <p className="text-sm text-white/70">
             {stage === "ringing" ? "Your money coach · S-Pankki" : mmss}
           </p>
-          <p className="rounded-full bg-emerald-900 px-3 py-1 text-xs text-emerald-200">
+          <p className="rounded-full bg-white/10 px-3 py-1 text-xs text-white/70">
             About your dentist bill. Not a collection call.
           </p>
         </div>
 
         {stage === "talking" && (
-          <div className="flex w-full max-w-sm flex-col gap-2 text-sm leading-relaxed text-emerald-100" aria-live="polite">
+          <div className="flex w-full max-w-sm flex-col gap-2 text-sm leading-relaxed text-white/80" aria-live="polite">
             {shown.map((l, i) => (
-              <p key={i} className={i === shown.length - 1 ? "text-emerald-50" : "text-emerald-300"}>
+              <p key={i} className={i === shown.length - 1 ? "text-white" : "text-white/55"}>
                 {l}
               </p>
             ))}
@@ -121,7 +121,7 @@ export function CallClient() {
               Decline
             </button>
             <button onClick={answer} className="flex flex-col items-center gap-2 text-sm">
-              <span className="flex size-16 animate-bounce items-center justify-center rounded-full bg-emerald-500 text-2xl" aria-hidden>
+              <span className="flex size-16 animate-bounce items-center justify-center rounded-full bg-mint text-slab text-2xl" aria-hidden>
                 📞
               </span>
               Answer
@@ -142,87 +142,47 @@ export function CallClient() {
   const outcome = done?.action ?? (stage === "paid" ? "paid" : stage === "snoozed" ? "snoozed" : null);
 
   return (
-    <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-4 px-4 py-6">
-      <header className="flex items-center justify-between">
-        <Link href="/" className="text-sm text-muted-foreground">
-          ← Home
-        </Link>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/solvo-logo.png" alt="Solvo" className="h-5 w-auto" />
-      </header>
+    <main className={PAGE}>
+      <TopBar back={<BackLink href="/" label="Home" />} />
+      <PageTitle title="Your dentist bill">
+        {UNPAID.supplier}, {UNPAID.what.toLowerCase()}.
+      </PageTitle>
 
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Your dentist bill</h1>
-        <p className="text-sm text-muted-foreground">
-          {UNPAID.supplier} · {UNPAID.what}
-        </p>
-      </div>
-
-      <div className="rounded-xl border bg-card p-4">
-        <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-sm">
-          <dt className="text-muted-foreground">Amount</dt>
-          <dd className="text-right font-semibold tabular-nums">{eur2.format(UNPAID.amount)}</dd>
-          <dt className="text-muted-foreground">Was due</dt>
-          <dd className="text-right">{fmtDate(UNPAID.dueDate)}</dd>
-          <dt className="text-muted-foreground">Reference</dt>
-          <dd className="text-right tabular-nums">{UNPAID.reference}</dd>
-          <dt className="text-muted-foreground">Paid from</dt>
-          <dd className="text-right">Set-aside for irregular costs</dd>
-        </dl>
-        <p className="mt-3 text-xs text-muted-foreground">
-          Health costs are in your irregular basket, so paying this doesn&apos;t lower your safe-to-spend this week.
-        </p>
-      </div>
+      <Group
+        footer="Health costs are in your irregular basket, so paying this doesn't lower your safe-to-spend this week."
+        className="mt-0"
+      >
+        <Row title="Amount" value={eur2.format(UNPAID.amount)} />
+        <Row title="Was due" value={fmtDate(UNPAID.dueDate)} />
+        <Row title="Reference" value={UNPAID.reference} />
+        <Row title="Paid from" value="Irregular costs set-aside" />
+      </Group>
 
       {outcome === "paid" ? (
-        <div className="flex flex-col gap-3 rounded-xl bg-emerald-950 p-4 text-emerald-50">
-          <p className="text-lg font-semibold">Paid. No reminder fee.</p>
-          <p className="text-sm text-emerald-200">
+        <Slab className="mt-6">
+          <p className="font-display text-[24px] font-semibold tracking-[-0.015em]">Paid. No reminder fee.</p>
+          <p className="mt-2 text-[15px] text-white/70">
             {eur.format(UNPAID.amount)} to {UNPAID.supplier}. Your safe-to-spend this week stays the same.
           </p>
-          <Link href="/" className="text-sm underline underline-offset-4">
+          <Link href="/" className="mt-4 inline-flex min-h-11 items-center text-[15px] font-semibold text-mint underline underline-offset-4">
             Back to home
           </Link>
-        </div>
+        </Slab>
       ) : outcome === "snoozed" ? (
-        <div className="flex flex-col gap-3 rounded-xl border p-4">
-          <p className="font-medium">OK, Solvo reminds you on Monday morning.</p>
-          <p className="text-sm text-muted-foreground">No more calls about this bill. You can pay any time from Home.</p>
-          <Link href="/" className="text-sm underline underline-offset-4">
+        <section className="mt-6 rounded-2xl bg-card p-4 shadow-[0_1px_3px_rgba(15,42,31,0.06)]">
+          <p className="text-[15px] font-semibold">OK, Solvo reminds you on Monday morning.</p>
+          <p className="mt-1 text-[14px] text-muted-foreground">No more calls about this bill. You can pay any time from Home.</p>
+          <Link href="/" className={`${secondaryButton} mt-4`}>
             Back to home
           </Link>
-        </div>
-      ) : stage === "confirm" ? (
-        <div className="flex flex-col gap-3 rounded-xl border border-emerald-700 p-4 text-sm">
-          <p className="font-medium">You approve this payment</p>
-          <ul className="list-disc pl-5 text-muted-foreground">
-            <li>
-              {eur2.format(UNPAID.amount)} to {UNPAID.supplier}, reference {UNPAID.reference}.
-            </li>
-            <li>From your S-Pankki account today.</li>
-          </ul>
-          <div className="flex gap-2">
-            <button
-              className="h-11 flex-1 rounded-lg bg-emerald-800 font-medium text-white"
-              onClick={() => {
-                setBillAction(UNPAID.id, "paid");
-                setStage("paid");
-              }}
-            >
-              Approve payment
-            </button>
-            <button className="h-11 rounded-lg border px-4" onClick={() => setStage("after")}>
-              Not now
-            </button>
-          </div>
-        </div>
+        </section>
       ) : (
-        <div className="flex flex-col gap-2">
-          <button className="h-11 rounded-lg bg-emerald-800 font-medium text-white" onClick={() => setStage("confirm")}>
+        <div className="mt-6 flex flex-col gap-2">
+          <button className={primaryButton} onClick={() => setStage("confirm")}>
             Pay {eur.format(UNPAID.amount)} now
           </button>
           <button
-            className="h-11 rounded-lg border font-medium"
+            className={secondaryButton}
             onClick={() => {
               setBillAction(UNPAID.id, "snoozed");
               setStage("snoozed");
@@ -232,14 +192,30 @@ export function CallClient() {
           </button>
           <Link
             href={`/coach?q=${encodeURIComponent(`I can't pay my ${UNPAID.amount} euro dentist bill right now. What can I do?`)}`}
-            className="flex h-11 items-center justify-center rounded-lg border font-medium"
+            className={secondaryButton}
           >
             I can&apos;t pay it right now
           </Link>
-          <p className="text-xs text-muted-foreground">
-            Solvo is your coach, not a collector. Calls are opt-in, and you can turn them off in settings.
+          <p className="mt-2 px-1 text-[13px] leading-snug text-muted-foreground">
+            Solvo is your coach, not a collector. Calls are opt-in, and you can turn them off any time.
           </p>
         </div>
+      )}
+
+      {stage === "confirm" && (
+        <ApproveSheet
+          title="You approve this payment"
+          points={[
+            `${eur2.format(UNPAID.amount)} to ${UNPAID.supplier}, reference ${UNPAID.reference}.`,
+            "From your S-Pankki account today.",
+          ]}
+          confirmLabel="Approve payment"
+          onConfirm={() => {
+            setBillAction(UNPAID.id, "paid");
+            setStage("paid");
+          }}
+          onCancel={() => setStage("after")}
+        />
       )}
     </main>
   );

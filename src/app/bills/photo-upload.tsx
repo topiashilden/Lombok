@@ -1,6 +1,8 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { Camera } from "lucide-react";
+import { IconTile, secondaryButton } from "@/components/solvo/ui";
 import type { Reading } from "@/lib/einvoice";
 
 const MAX_SIDE = 1600;
@@ -23,6 +25,7 @@ async function toJpegDataUrl(file: File): Promise<string> {
   }
 }
 
+/** Secondary path: a bill that never arrives as an e-invoice. Same reading, same comparison. */
 export function PhotoUpload({ onRead }: { onRead: (r: { reading: Reading; ms: number; model?: string }) => void }) {
   const input = useRef<HTMLInputElement>(null);
   const [state, setState] = useState<{ busy: boolean; error?: string }>({ busy: false });
@@ -48,11 +51,18 @@ export function PhotoUpload({ onRead }: { onRead: (r: { reading: Reading; ms: nu
   }
 
   return (
-    <div className="flex flex-col gap-2 rounded-xl border border-dashed p-4">
-      <p className="text-sm font-medium">A bill that isn&apos;t an e-invoice?</p>
-      <p className="text-xs text-muted-foreground">
-        Paper bill or a bill paid from another bank: take a photo and Solvo reads it the same way.
-      </p>
+    <section className="mt-7 rounded-2xl border border-dashed border-border p-4">
+      <div className="flex items-start gap-3">
+        <IconTile tone="grey">
+          <Camera />
+        </IconTile>
+        <div>
+          <p className="text-[15px] font-medium">A bill that isn&apos;t an e-invoice?</p>
+          <p className="mt-0.5 text-[13px] leading-snug text-muted-foreground">
+            A paper bill, or one you pay from another bank. Take a photo and Solvo reads it the same way.
+          </p>
+        </div>
+      </div>
       <input
         ref={input}
         type="file"
@@ -61,15 +71,10 @@ export function PhotoUpload({ onRead }: { onRead: (r: { reading: Reading; ms: nu
         className="hidden"
         onChange={(e) => e.target.files?.[0] && handle(e.target.files[0])}
       />
-      <button
-        type="button"
-        disabled={state.busy}
-        onClick={() => input.current?.click()}
-        className="h-11 rounded-lg border font-medium disabled:opacity-60"
-      >
-        {state.busy ? "Reading your photo…" : "📷 Photograph a bill"}
+      <button type="button" disabled={state.busy} onClick={() => input.current?.click()} className={`${secondaryButton} mt-4`}>
+        {state.busy ? "Reading your photo…" : "Photograph a bill"}
       </button>
-      {state.error && <p className="text-xs text-red-700">{state.error}</p>}
-    </div>
+      {state.error && <p className="mt-2 text-[13px] text-warn">{state.error}</p>}
+    </section>
   );
 }

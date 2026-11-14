@@ -1,15 +1,12 @@
 "use client";
 
-import Link from "next/link";
 import { useMemo, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Group, PageTitle, eur, eur2 } from "@/components/solvo/ui";
 import type { Reading } from "@/lib/einvoice";
 import { approveSwitch, useSavingsPlan, useSwitches, weeklyBoost } from "@/lib/switches";
 import { compareTelecom, TELECOM_OFFERS_UPDATED, type TelecomTerms } from "@/lib/telecom-offers";
+import { ApproveSheet, DoneView, EditField, OfferOption, ReadFields, SavingSlab, StickyAction } from "./switch-ui";
 
-const eur = new Intl.NumberFormat("fi-FI", { style: "currency", currency: "EUR", maximumFractionDigits: 0 });
-const eur2 = new Intl.NumberFormat("fi-FI", { style: "currency", currency: "EUR", minimumFractionDigits: 2 });
 const dateFmt = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
 const fmtDate = (iso: string) => dateFmt.format(new Date(`${iso}T00:00:00Z`));
 
@@ -46,198 +43,111 @@ export function TelecomDetail(props: {
   if (stage === "done") {
     const boost = weeklyBoost(switches, plan);
     return (
-      <div className="flex flex-col gap-4">
-        <Card className="bg-emerald-950 text-emerald-50 ring-emerald-900">
-          <CardHeader>
-            <CardDescription className="text-emerald-200">{isMatch ? "Price-match request sent" : "Switch requested"}</CardDescription>
-            <CardTitle className="text-2xl">
-              {chosen.operator} {isMatch ? "" : chosen.product}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-2 text-sm text-emerald-100">
-            {isMatch ? (
-              <p>Solvo asked {r.supplier} to lower your price. We&apos;ll tell you their answer. Nothing changes if they say no.</p>
-            ) : (
-              <p>
-                Starts {fmtDate(startDate)}. Your phone numbers move with you, and {chosen.operator} cancels your {r.supplier}{" "}
-                contract for you.
-              </p>
-            )}
-            <p>You save about {eur.format(chosen.saving)} a year.</p>
-          </CardContent>
-        </Card>
-        <Card size="sm">
-          <CardHeader>
-            <CardDescription>Safe to spend this week</CardDescription>
-            <CardTitle className="flex items-baseline gap-3 text-4xl font-semibold tracking-tight">
-              {eur.format(props.remaining + boost)}
-              <span className="text-base font-medium text-emerald-700">+{eur.format(boost)}/week</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">
+      <DoneView
+        title={isMatch ? "Price-match request sent" : "Switch requested"}
+        body={
+          isMatch ? (
+            <>Solvo asked {r.supplier} to lower your price. We&apos;ll tell you their answer. Nothing changes if they say no.</>
+          ) : (
+            <>
+              {chosen.operator} {chosen.product} starts {fmtDate(startDate)}. Your phone numbers move with you, and{" "}
+              {chosen.operator} cancels your {r.supplier} contract for you.
+            </>
+          )
+        }
+        remainingBefore={props.remaining + boost - perWeek}
+        remainingAfter={props.remaining + boost}
+        perWeek={perWeek}
+        footnote={
+          <>
             Your weekly budget is now {eur.format(props.weeklyBudget + boost)}, up from {eur.format(props.weeklyBudget)},
-            because your fixed costs got smaller.
-          </CardContent>
-        </Card>
-        <Link
-          href="/save"
-          className="flex h-11 items-center justify-center rounded-lg bg-emerald-800 font-medium text-white hover:bg-emerald-900"
-        >
-          Save it in a fund instead
-        </Link>
-        <Link href="/" className="text-center text-sm text-muted-foreground underline underline-offset-4">
-          Back to home
-        </Link>
-      </div>
+            because your fixed costs got smaller. That&apos;s {eur.format(Math.max(0, chosen.saving))} a year.
+          </>
+        }
+      />
     );
   }
 
-  const field = (label: string, k: keyof TelecomTerms, unit: string, step = "any") => (
-    <label className="flex items-center justify-between gap-3 text-sm">
-      <span className="text-muted-foreground">{label}</span>
-      <span className="flex items-center gap-1">
-        <input
-          type="number"
-          inputMode="decimal"
-          step={step}
-          min={0}
-          value={terms[k]}
-          onChange={(e) => setTerms((t) => ({ ...t, [k]: Math.max(0, Number(e.target.value) || 0) }))}
-          className="w-24 rounded-md border bg-background px-2 py-1 text-right tabular-nums"
-        />
-        <span className="w-12 text-xs text-muted-foreground">{unit}</span>
-      </span>
-    </label>
-  );
+  const set = (k: keyof TelecomTerms) => (v: number | null) => setTerms((t) => ({ ...t, [k]: Math.max(0, v ?? 0) }));
 
   return (
-    <div className="flex flex-col gap-4">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Your phone and internet</h1>
-        <p className="text-sm text-muted-foreground">
-          {r.supplier}, {r.product}. Valid until further notice, one month&apos;s notice.
-        </p>
-      </div>
+    <div className="flex flex-col pb-24">
+      <PageTitle title="Your phone and internet">
+        {r.supplier}, {r.product}. Valid until further notice, one month&apos;s notice.
+      </PageTitle>
 
-      <Card className="bg-emerald-950 text-emerald-50 ring-emerald-900">
-        <CardHeader>
-          <CardDescription className="text-emerald-200">{isMatch ? "Asking for a better price saves" : "Switching saves you"}</CardDescription>
-          <CardTitle className="text-5xl font-semibold tracking-tight">
-            {eur.format(Math.max(0, chosen.saving))}
-            <span className="ml-1 text-xl font-medium">/year</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="text-sm text-emerald-200">
-          That&apos;s +{eur.format(perWeek)} to your safe-to-spend every week. You pay {eur2.format(cmp.currentMonthly)} a month
-          today.
-        </CardContent>
-      </Card>
+      <SavingSlab
+        label={isMatch ? "Asking for a better price saves" : "Switching saves you"}
+        saving={chosen.saving}
+        before={{ label: `Do nothing, ${eur2.format(cmp.currentMonthly)} a month`, yearly: cmp.current }}
+        after={{ label: `${chosen.operator}${chosen.kind === "switch" ? ` ${chosen.product}` : ", price match"}`, yearly: chosen.yearly }}
+        footnote={<>That&apos;s +{eur.format(perWeek)} to your safe-to-spend every week.</>}
+      />
 
-      <Card size="sm">
-        <CardHeader>
-          <CardTitle>What Solvo read from your e-invoice</CardTitle>
-          <CardDescription className="flex items-center justify-between gap-2">
-            <span>Check it. You can correct anything.</span>
-            {props.badge}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-2">
-          {field("Mobile lines", "lines", "lines", "1")}
-          {field("Price per line", "perLine", "€/mo")}
-          {field("Home internet", "homeInternet", "€/mo")}
-        </CardContent>
-      </Card>
+      <ReadFields badge={props.badge}>
+        <EditField label="Mobile lines" value={terms.lines} unit="lines" step="1" min={0} onChange={set("lines")} />
+        <EditField label="Price per line" value={terms.perLine} unit="€/mo" min={0} onChange={set("perLine")} />
+        <EditField label="Home internet" value={terms.homeInternet} unit="€/mo" min={0} onChange={set("homeInternet")} />
+      </ReadFields>
 
-      <Card size="sm">
-        <CardHeader>
-          <CardTitle>Your options for a year</CardTitle>
-          <CardDescription>For {terms.lines} unlimited-data {terms.lines === 1 ? "line" : "lines"} and home internet. Tap one to choose it.</CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-2 text-sm">
-          <div className="flex justify-between text-muted-foreground">
-            <span>Do nothing</span>
-            <span className="tabular-nums text-red-700">{eur.format(cmp.current)}</span>
-          </div>
-          {cmp.offers.map((o) => {
-            const isChosen = o.id === chosen.id;
-            return (
-              <button
-                key={o.id}
-                onClick={() => setChosenId(o.id)}
-                className={`flex flex-col gap-0.5 rounded-lg border p-2 text-left ${isChosen ? "border-emerald-700 bg-emerald-50" : ""}`}
-              >
-                <span className="flex justify-between gap-2 font-medium">
-                  <span>
-                    {o.operator} {o.kind === "switch" ? o.product : ""}
-                    {o.id === cmp.recommended.id && <span className="ml-2 text-xs text-emerald-700">Coach&apos;s pick</span>}
-                  </span>
-                  <span className="tabular-nums">{eur.format(o.yearly)}</span>
-                </span>
-                <span className="text-xs text-muted-foreground">
+      <Group
+        title="Your options for a year"
+        aside={`${terms.lines} ${terms.lines === 1 ? "line" : "lines"} + internet`}
+        footer={`Demo offer table, updated ${fmtDate(TELECOM_OFFERS_UPDATED)}. Operators are fictional.`}
+      >
+        <div role="radiogroup" aria-label="Phone and internet offers">
+          {cmp.offers.map((o) => (
+            <OfferOption
+              key={o.id}
+              chosen={o.id === chosen.id}
+              onSelect={() => setChosenId(o.id)}
+              title={`${o.operator}${o.kind === "switch" ? ` ${o.product}` : ""}`}
+              yearly={o.yearly}
+              detail={
+                <>
                   {o.kind === "price_match" ? `${o.product}. ` : ""}
                   {eur2.format(o.perLine)}/line ({o.lineSpeed})
                   {o.homeInternet != null ? ` + ${o.homeSpeed} ${eur2.format(o.homeInternet)}` : " + your current home internet"}
-                  {o.note ? ` · ${o.note}` : ""}
-                </span>
-              </button>
-            );
-          })}
-          <p className="text-xs text-muted-foreground">
-            Demo offer table, updated {fmtDate(TELECOM_OFFERS_UPDATED)}. Operators are fictional.
-          </p>
-        </CardContent>
-      </Card>
+                  {o.note ? `. ${o.note}` : ""}
+                </>
+              }
+              pick={o.id === cmp.recommended.id ? "Coach's pick" : undefined}
+            />
+          ))}
+        </div>
+      </Group>
 
-      {stage === "compare" ? (
-        <Button className="h-11 bg-emerald-800 text-base text-white hover:bg-emerald-900" onClick={() => setStage("confirm")}>
-          {isMatch ? `Ask ${r.supplier} for a better price` : `Switch to ${chosen.operator}`}
-        </Button>
-      ) : (
-        <Card size="sm" className="ring-emerald-700">
-          <CardHeader>
-            <CardTitle>{isMatch ? "You approve this request" : "You approve this switch"}</CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-3 text-sm">
-            <ul className="list-disc pl-5 text-muted-foreground">
-              {isMatch ? (
-                <>
-                  <li>Solvo asks {r.supplier} to lower your lines to {eur2.format(chosen.perLine)} a month.</li>
-                  <li>Your contract and numbers stay the same.</li>
-                </>
-              ) : (
-                <>
-                  <li>
-                    New contract: {chosen.operator} {chosen.product}, from {fmtDate(startDate)}.
-                  </li>
-                  <li>Your phone numbers move with you. {chosen.operator} cancels {r.supplier} for you.</li>
-                  <li>No switching fees. You can cancel within 14 days.</li>
-                </>
-              )}
-            </ul>
-            <div className="flex gap-2">
-              <Button
-                className="h-10 flex-1 bg-emerald-800 text-white hover:bg-emerald-900"
-                onClick={() => {
-                  approveSwitch({
-                    bill: "telecom",
-                    fromSupplier: r.supplier,
-                    toSupplier: chosen.operator,
-                    toProduct: isMatch ? "price match" : chosen.product,
-                    yearlySaving: Math.max(0, chosen.saving),
-                    startDate: isMatch ? null : startDate,
-                    approvedAt: new Date().toISOString(),
-                  });
-                  setStage("done");
-                }}
-              >
-                Approve
-              </Button>
-              <Button variant="outline" className="h-10" onClick={() => setStage("compare")}>
-                Not now
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+      <StickyAction onClick={() => setStage("confirm")}>
+        {isMatch ? `Ask ${r.supplier} for a better price` : `Switch to ${chosen.operator}`}
+      </StickyAction>
+
+      {stage === "confirm" && (
+        <ApproveSheet
+          title={isMatch ? "You approve this request" : "You approve this switch"}
+          points={
+            isMatch
+              ? [`Solvo asks ${r.supplier} to lower your lines to ${eur2.format(chosen.perLine)} a month.`, "Your contract and numbers stay the same."]
+              : [
+                  `New contract: ${chosen.operator} ${chosen.product}, from ${fmtDate(startDate)}.`,
+                  `Your phone numbers move with you. ${chosen.operator} cancels ${r.supplier} for you.`,
+                  "No switching fees. You can cancel within 14 days.",
+                ]
+          }
+          confirmLabel={isMatch ? "Send request" : "Approve switch"}
+          onCancel={() => setStage("compare")}
+          onConfirm={() => {
+            approveSwitch({
+              bill: "telecom",
+              fromSupplier: r.supplier,
+              toSupplier: chosen.operator,
+              toProduct: isMatch ? "price match" : chosen.product,
+              yearlySaving: Math.max(0, chosen.saving),
+              startDate: isMatch ? null : startDate,
+              approvedAt: new Date().toISOString(),
+            });
+            setStage("done");
+          }}
+        />
       )}
     </div>
   );
