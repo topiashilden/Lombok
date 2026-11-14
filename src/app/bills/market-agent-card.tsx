@@ -32,13 +32,57 @@ const NOUN: Record<AgentDb["agent"], { offers: string; sellers: string }> = {
   telecom: { offers: "plans", sellers: "operators" },
 };
 
-/** forYou: what the agent's result means for this customer, e.g. their group and consumption. */
-export function MarketAgentCard<D extends AgentDb>(props: { db: D; forYou: ReactNode; onResult: (db: D) => void }) {
+type FoundRow = { id: string; group: string; title: string; price: string; conditions: string | null; sourceUrl: string; checkedAt: string; sort: number };
+
+/** Everything the agent found, as display rows grouped by contract type, cheapest first. */
+function foundRows(db: AgentDb): FoundRow[] {
+  if (db.agent === "electricity")
+    return db.offers.map((o) => ({
+      id: o.id,
+      group: o.pricing === "fixed" ? "Fixed price" : "Spot price",
+      title: `${o.supplier} ${o.product}`,
+      price:
+        (o.pricing === "fixed" ? `${o.centsPerKwh.toFixed(2)} c/kWh` : `Spot + ${o.centsPerKwh.toFixed(2)} c/kWh margin`) +
+        ` + ${o.monthlyFee.toFixed(2)} €/mo` +
+        (o.termMonths ? `, ${o.termMonths} months` : ""),
+      conditions: o.conditions,
+      sourceUrl: o.sourceUrl,
+      checkedAt: o.checkedAt,
+      sort: (o.pricing === "fixed" ? 0 : 1000) + o.centsPerKwh,
+    }));
+  return db.offers.map((o) => ({
+    id: o.id,
+    group: o.kind === "mobile" ? "Mobile plans" : "Home internet",
+    title: `${o.operator} ${o.product}`,
+    price: `${o.monthlyPrice.toFixed(2)} €/mo, ${o.speedMbps} Mbit/s`,
+    conditions: o.conditions,
+    sourceUrl: o.sourceUrl,
+    checkedAt: o.checkedAt,
+    sort: (o.kind === "mobile" ? 0 : 1000) + o.monthlyPrice,
+  }));
+}
+
+const dayFmt = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
+
+/**
+ * forYou: what the agent's result means for this customer, e.g. their group and consumption.
+ * shortlist: ids of the offers shown to this customer, marked in the full list.
+ */
+export function MarketAgentCard<D extends AgentDb>(props: {
+  db: D;
+  forYou: ReactNode;
+  shortlist?: string[];
+  onResult: (db: D) => void;
+}) {
   const { db } = props;
   const noun = NOUN[db.agent];
   const [steps, setSteps] = useState<Record<AgentStep, StepState> | null>(null);
   const [running, setRunning] = useState(false);
   const [note, setNote] = useState<string | null>(null);
+  const [showFound, setShowFound] = useState(false);
+  const rows = foundRows(db).sort((a, b) => a.sort - b.sort);
+  const groups = [...new Set(rows.map((r) => r.group))];
+  const mine = new Set(props.shortlist ?? []);
   const sellers = new Set(db.offers.map((o) => ("supplier" in o ? o.supplier : o.operator))).size;
 
   async function run() {
@@ -62,7 +106,10 @@ export function MarketAgentCard<D extends AgentDb>(props: { db: D; forYou: React
           const e = JSON.parse(line) as AgentEvent;
           if (e.type === "step") setSteps((prev) => (prev ? { ...prev, [e.step]: { status: e.status, detail: e.detail } } : prev));
           else {
-            if (e.live) props.onResult(e.db as D);
+            if (e.live) {
+              props.onResult(e.db as D);
+              setShowFound(true);
+            }
             else setNote(`Showing the saved run from ${timeFmt.format(new Date(e.db.ranAt))}.${e.error ? ` (${e.error.slice(0, 120)})` : ""}`);
           }
         }
@@ -134,6 +181,42 @@ export function MarketAgentCard<D extends AgentDb>(props: { db: D; forYou: React
         <RefreshCw className={`size-4 ${running ? "animate-spin" : ""}`} aria-hidden />
         {running ? "Agent is working…" : "Run the agent now"}
       </button>
+
+      <details className="group/found mt-2" open={showFound} onToggle={(e) => setShowFound(e.currentTarget.open)}>
+        <summary className="flex h-11 cursor-pointer list-none items-center justify-between text-[14px] font-medium text-primary">
+          What the agent found ({rows.length})
+          <ChevronDown className="size-4 transition-transform group-open/found:rotate-180" aria-hidden />
+        </summary>
+        <p className="text-[12px] leading-snug text-muted-foreground">
+          Searched for: {db.queries.map((q) => `“${q}”`).join(", ")}. {db.mode === "exa" ? "Last run" : "Saved run"} {timeFmt.format(new Date(db.ranAt))}. Offers
+          not seen in the latest run keep their older check date.
+        </p>
+        {groups.map((g) => (
+          <div key={g} className="mt-3">
+            <h3 className="text-[13px] font-semibold tracking-wide text-muted-foreground uppercase">{g}</h3>
+            <ul className="mt-1 divide-y">
+              {rows
+                .filter((r) => r.group === g)
+                .map((r) => (
+                  <li key={r.id} className="py-2.5 text-[13px] leading-snug">
+                    <div className="flex items-start justify-between gap-2">
+                      <span className="text-[14px] font-medium">{r.title}</span>
+                      {mine.has(r.id) && <Chip tone="green">For you</Chip>}
+                    </div>
+                    <span className="num block">{r.price}</span>
+                    {r.conditions && <span className="block text-muted-foreground">{r.conditions}</span>}
+                    <span className="block text-muted-foreground">
+                      <a href={r.sourceUrl} className="text-primary underline-offset-2 active:underline">
+                        {domainOf(r.sourceUrl)}
+                      </a>
+                      , checked {dayFmt.format(new Date(`${r.checkedAt}T00:00:00Z`))}
+                    </span>
+                  </li>
+                ))}
+            </ul>
+          </div>
+        ))}
+      </details>
 
       <details className="group mt-2">
         <summary className="flex h-11 cursor-pointer list-none items-center justify-between text-[14px] font-medium text-primary">

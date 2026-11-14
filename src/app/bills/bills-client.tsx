@@ -437,6 +437,7 @@ function ElectricityDetail(props: { loaded: Loaded; weeklyBudget: number; remain
       <MarketAgentCard
         db={db}
         onResult={setDb}
+        shortlist={cmp.offers.map((o) => o.id)}
         forYou={
           <>
             For you it only picks the best of your group,{" "}
