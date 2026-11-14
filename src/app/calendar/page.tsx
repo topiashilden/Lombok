@@ -1,7 +1,7 @@
 import { connection } from "next/server";
 import { offsetDays, todayIso } from "@/lib/demo-clock";
 import { scheduleFor } from "@/lib/schedule-server";
-import { getSource } from "@/lib/source";
+import { getEffective } from "@/lib/source-banks";
 import { CalendarClient } from "./calendar-client";
 
 export const metadata = { title: "Calendar · Solvo" };
@@ -10,6 +10,6 @@ export const metadata = { title: "Calendar · Solvo" };
 export default async function CalendarPage() {
   // Render per request: these pages show dates, and the demo clock reads the real date. See src/lib/demo-clock.ts.
   await connection();
-  const { customer: c } = getSource();
+  const { customer: c } = await getEffective();
   return <CalendarClient items={scheduleFor(c).items} today={todayIso()} offset={offsetDays()} />;
 }

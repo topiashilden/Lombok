@@ -11,6 +11,7 @@ export function Sheet({
   onDone,
   doneLabel = "Done",
   doneDisabled = false,
+  hideDone = false,
   children,
 }: {
   title: string;
@@ -18,6 +19,7 @@ export function Sheet({
   onDone?: () => void; // what the main button does; defaults to closing
   doneLabel?: string;
   doneDisabled?: boolean;
+  hideDone?: boolean; // for sheets whose choices act on their own
   children: ReactNode;
 }) {
   useEffect(() => {
@@ -44,9 +46,11 @@ export function Sheet({
           </button>
         </div>
         {children}
-        <button type="button" className={`${primaryButton} mt-6`} onClick={onDone ?? onClose} disabled={doneDisabled}>
-          {doneLabel}
-        </button>
+        {!hideDone && (
+          <button type="button" className={`${primaryButton} mt-6`} onClick={onDone ?? onClose} disabled={doneDisabled}>
+            {doneLabel}
+          </button>
+        )}
       </section>
     </div>
   );

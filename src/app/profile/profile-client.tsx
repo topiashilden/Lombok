@@ -1,5 +1,7 @@
 "use client";
 
+import { OtherBanks } from "@/components/other-banks";
+import type { BankId, View } from "@/lib/banks";
 import { useRouter } from "next/navigation";
 
 import {
@@ -45,6 +47,9 @@ export function ProfileClient(props: {
   age: number;
   postalCode: string;
   savingsGoal: number;
+  banks: BankId[];
+  view: View;
+  showBanks: boolean; // hidden in local Nordea mode: real data is never merged with the demo banks
 }) {
   const router = useRouter();
   const mode = useDemoMode();
@@ -224,6 +229,8 @@ export function ProfileClient(props: {
           Read my {readCount} e-invoices again with Gemini
         </button>
       )}
+
+      {props.showBanks && <OtherBanks banks={props.banks} view={props.view} />}
 
       <Group
         title="Your data"

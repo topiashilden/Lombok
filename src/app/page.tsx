@@ -3,6 +3,7 @@ import { Screen } from "@/components/solvo/screen";
 import Link from "next/link";
 import { ArrowRight, CalendarDays, MessageCircle, ReceiptText } from "lucide-react";
 import { LiveWeeklyEuro, ResetDemoButton, SwitchBoostNote } from "@/components/live-budget";
+import { AllBanksCard } from "@/components/all-banks-card";
 import { OnboardingGate, PlanCard } from "@/components/onboarding-home";
 import { OverdueBillCard } from "@/components/overdue-bill";
 import { UpcomingCard } from "@/components/upcoming-card";
@@ -11,7 +12,7 @@ import { safeToSpend, topCategories, unknownBills } from "@/lib/coach";
 import { BASKET_LABELS, type Basket } from "@/lib/demo";
 import { scheduleFor } from "@/lib/schedule-server";
 import { todayIso } from "@/lib/demo-clock";
-import { getSource } from "@/lib/source";
+import { getEffective } from "@/lib/source-banks";
 
 const dateFmt = new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
 const fmtDate = (iso: string) => dateFmt.format(new Date(`${iso}T00:00:00Z`));
@@ -22,7 +23,7 @@ const BASKET_COLOR: Record<Basket, string> = { 1: "bg-chart-1", 2: "bg-chart-2",
 export default async function Home() {
   // Render per request: these pages show dates, and the demo clock reads the real date. See src/lib/demo-clock.ts.
   await connection();
-  const { customer: c, local } = getSource();
+  const { base, customer: c, local, banks, view } = await getEffective();
   const s = safeToSpend(c);
   const schedule = scheduleFor(c);
   const bills = unknownBills(c);
@@ -105,6 +106,8 @@ export default async function Home() {
         <OverdueBillCard asOf={c.asOf} />
 
         <PlanCard />
+
+        <AllBanksCard base={base} banks={banks} view={view} />
 
         <UpcomingCard items={schedule.items} today={realToday} />
 

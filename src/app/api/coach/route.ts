@@ -3,7 +3,9 @@ import { portfolio } from "@/data/portfolio";
 import { UNPAID } from "@/data/reminders";
 import { fundById } from "@/lib/funds";
 import { safeToSpend } from "@/lib/coach";
-import { BASKET_LABELS, MAIN_CUSTOMER, type Basket } from "@/lib/demo";
+import { banksNoteFor } from "@/lib/combine";
+import { BASKET_LABELS, MAIN_CUSTOMER, type Basket, type DemoCustomer } from "@/lib/demo";
+import { getDemoEffective } from "@/lib/source-banks";
 import { todayIso, toDemo, toShown } from "@/lib/demo-clock";
 import { compare } from "@/lib/offers";
 import { MERCHANT_TYPE_NAMES, spending, type SpendingQuery, type SpendingResult } from "@/lib/spending";
@@ -23,13 +25,11 @@ type ChatMessage = { role: "user" | "coach"; text: string };
 type Part = { text?: string; functionCall?: { name: string; args?: SpendingQuery; id?: string }; thoughtSignature?: string };
 type Content = { role: "user" | "model"; parts: Record<string, unknown>[] };
 
-const c = MAIN_CUSTOMER;
-
 // The demo clock (src/lib/demo-clock.ts) shows real dates. The data and the spending tool work in the demo's own dates, so the
 // model is told real dates, its dates are mapped back for the tool, and the tool's dates are mapped forward for the model.
 const realDaysLeft = () => 7 - ((new Date(`${todayIso()}T00:00:00Z`).getUTCDay() + 6) % 7);
 
-function spendingForModel(q: SpendingQuery) {
+function spendingForModel(q: SpendingQuery, c: DemoCustomer) {
   const raw = spending(c, { ...q, from: q.from ? toDemo(q.from) : undefined, to: q.to ? toDemo(q.to) : undefined });
   const shown = {
     ...raw,
@@ -41,10 +41,11 @@ function spendingForModel(q: SpendingQuery) {
   };
   return { raw, shown };
 }
-const CATEGORIES = Object.keys(c.basketOf).sort();
+// Every category the tool may be asked about, including the ones another connected bank adds.
+const CATEGORIES = Object.keys({ ...MAIN_CUSTOMER.basketOf, Insurance: 1, Subscriptions: 1 }).sort();
 const eur = (n: number) => `€${Math.round(n).toLocaleString("en-US")}`;
 
-function customerContext() {
+function customerContext(c: DemoCustomer) {
   const s = safeToSpend(c);
   const el = SAVED_READINGS.electricity;
   const pf = portfolio();
@@ -85,7 +86,7 @@ Unpaid bill: ${UNPAID.supplier}, ${eur(UNPAID.amount)} (${UNPAID.what}), was due
 Fund holdings (S-Pankki funds, demo values): ${pf.holdings.map((h) => `${fundById(h.fundId).name}, put in ${eur(h.invested)} since ${h.since}, worth ${eur(h.value)} (${h.yearChangePct.toFixed(1)} % in 12 months)`).join("; ")}. Total worth ${eur(pf.value)} on ${eur(pf.invested)} put in (${pf.gainPct.toFixed(1)} %), ${pf.yearChangePct.toFixed(1)} % in the last 12 months. No new fund deposits since 2023. The Save tab can set up a monthly plan. Never recommend a specific fund or predict returns: Solvo doesn't give investment advice.`;
 }
 
-const SYSTEM = `You are Solvo, a friendly money coach inside the S-Pankki bank app. You talk to one customer about their own money.
+const systemFor = (c: DemoCustomer, banksNote: string) => `You are Solvo, a friendly money coach inside the S-Pankki bank app. You talk to one customer about their own money.
 
 Rules:
 - Answer in the language the user writes in (Finnish or English).
@@ -97,7 +98,7 @@ Rules:
 - You never move money or switch contracts yourself. Switches happen only when the user approves them in the app.
 - No investment, loan or tax advice. Say a human advisor at S-Pankki can help.
 
-${customerContext()}`;
+${customerContext(c)}${banksNote}`;
 
 const TOOLS = [
   {
@@ -121,12 +122,12 @@ const TOOLS = [
   },
 ];
 
-async function gemini(model: string, contents: Content[], key: string, signal: AbortSignal) {
+async function gemini(model: string, contents: Content[], key: string, signal: AbortSignal, system: string) {
   const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
     method: "POST",
     headers: { "Content-Type": "application/json", "x-goog-api-key": key },
     body: JSON.stringify({
-      systemInstruction: { parts: [{ text: SYSTEM }] },
+      systemInstruction: { parts: [{ text: system }] },
       contents,
       tools: TOOLS,
       generationConfig: { temperature: 0.3, thinkingConfig: { thinkingLevel: "low" } },
@@ -140,12 +141,12 @@ async function gemini(model: string, contents: Content[], key: string, signal: A
   return content as { role: "model"; parts: Part[] };
 }
 
-async function askGemini(messages: ChatMessage[], key: string) {
+async function askGemini(messages: ChatMessage[], key: string, c: DemoCustomer, banksNote: string) {
   const signal = AbortSignal.timeout(DEADLINE_MS);
   let lastError: unknown;
   for (const model of MODELS) {
     try {
-      return { ...(await converse(model, messages, key, signal)), model };
+      return { ...(await converse(model, messages, key, signal, c, banksNote)), model };
     } catch (e) {
       lastError = e;
       const status = (e as { status?: number }).status;
@@ -155,7 +156,7 @@ async function askGemini(messages: ChatMessage[], key: string) {
   throw lastError;
 }
 
-async function converse(model: string, messages: ChatMessage[], key: string, signal: AbortSignal) {
+async function converse(model: string, messages: ChatMessage[], key: string, signal: AbortSignal, c: DemoCustomer, banksNote: string) {
   const contents: Content[] = messages.map((m) => ({
     role: m.role === "user" ? "user" : "model",
     parts: [{ text: m.text }],
@@ -163,7 +164,7 @@ async function converse(model: string, messages: ChatMessage[], key: string, sig
   const checks: SpendingResult[] = [];
 
   for (let round = 0; round <= MAX_TOOL_ROUNDS; round++) {
-    const reply = await gemini(model, contents, key, signal);
+    const reply = await gemini(model, contents, key, signal, systemFor(c, banksNote));
     const calls = reply.parts.filter((p) => p.functionCall);
     if (!calls.length || round === MAX_TOOL_ROUNDS) {
       const answer = reply.parts
@@ -178,7 +179,7 @@ async function converse(model: string, messages: ChatMessage[], key: string, sig
     contents.push({
       role: "user",
       parts: calls.map(({ functionCall }) => {
-        const { raw, shown } = spendingForModel(functionCall!.args ?? {});
+        const { raw, shown } = spendingForModel(functionCall!.args ?? {}, c);
         checks.push(raw); // the screen formats these through the demo clock, so they stay in demo dates
         return { functionResponse: { name: functionCall!.name, id: functionCall!.id, response: { result: shown } } };
       }),
@@ -201,7 +202,7 @@ const KEYWORDS: [RegExp, SpendingQuery][] = [
   [/travel|matka|hotel/i, { category: "Travel" }],
 ];
 
-function offlineAnswer(question: string) {
+function offlineAnswer(question: string, c: DemoCustomer) {
   const fi = /[äö]|paljon|kuinka|mihin/i.test(question);
   const hit = KEYWORDS.find(([re]) => re.test(question));
   if (!hit) {
@@ -231,15 +232,19 @@ export async function POST(request: Request) {
   const last = messages.at(-1);
   if (!last || last.role !== "user") return Response.json({ error: "No question" }, { status: 400 });
 
+  // The customer as chosen in the app, always from the synthetic demo data (never real bank data), with a note on connected banks.
+  const { customer: c, base, banks, view } = await getDemoEffective();
+  const banksNote = banks.length && view === "all" ? banksNoteFor(base, banks) : "";
+
   const started = Date.now();
   const key = process.env.GEMINI_API_KEY;
   if (key) {
     try {
-      const out = await askGemini(messages, key);
+      const out = await askGemini(messages, key, c, banksNote);
       return Response.json({ ...out, source: "gemini", ms: Date.now() - started });
     } catch (e) {
-      return Response.json({ ...offlineAnswer(last.text), source: "offline", ms: Date.now() - started, error: String(e) });
+      return Response.json({ ...offlineAnswer(last.text, c), source: "offline", ms: Date.now() - started, error: String(e) });
     }
   }
-  return Response.json({ ...offlineAnswer(last.text), source: "offline", ms: 0, error: "GEMINI_API_KEY not set" });
+  return Response.json({ ...offlineAnswer(last.text, c), source: "offline", ms: 0, error: "GEMINI_API_KEY not set" });
 }
