@@ -293,16 +293,21 @@ export function OtherBanks({
             {sandbox.enabled ? "These are Enable Banking's test banks. In production the list is your real banks." : "Finland's banks on Enable Banking. Demo: connecting is simulated."}
           </p>
 
-          <h3 className="mt-5 mb-2 text-[13px] font-medium text-muted-foreground">Investing platform</h3>
-          <div className="overflow-hidden rounded-2xl bg-muted/50">
-            {PLATFORMS.map((p) => (
-              <button key={p} type="button" onClick={() => { setChoice({ kind: "platform", name: p }); setStep("consent"); }} className={row}>
-                <IconTile><TrendingUp /></IconTile>
-                <span className="text-[15px] font-medium">{p}</span>
-              </button>
-            ))}
-          </div>
-          <p className="mt-2 text-[13px] leading-snug text-muted-foreground">Investing platforms aren&apos;t part of open banking. Demo: example holdings.</p>
+          {/* Real bank data is never merged with demo data, so no simulated platform is offered next to it. */}
+          {!live?.connected && (
+            <>
+              <h3 className="mt-5 mb-2 text-[13px] font-medium text-muted-foreground">Investing platform</h3>
+              <div className="overflow-hidden rounded-2xl bg-muted/50">
+                {PLATFORMS.map((p) => (
+                  <button key={p} type="button" onClick={() => { setChoice({ kind: "platform", name: p }); setStep("consent"); }} className={row}>
+                    <IconTile><TrendingUp /></IconTile>
+                    <span className="text-[15px] font-medium">{p}</span>
+                  </button>
+                ))}
+              </div>
+              <p className="mt-2 text-[13px] leading-snug text-muted-foreground">Investing platforms aren&apos;t part of open banking. Demo: example holdings.</p>
+            </>
+          )}
         </Sheet>
       )}
 
