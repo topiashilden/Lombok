@@ -1,3 +1,4 @@
+import { Screen } from "@/components/solvo/screen";
 import { DEFAULT_SAVINGS_GOAL_PER_MONTH, safeToSpend } from "@/lib/coach";
 import { MAIN_CUSTOMER } from "@/lib/demo";
 import { SaveClient } from "./save-client";
@@ -11,13 +12,15 @@ export default function SavePage() {
   const fundTx = c.transactions.filter((t) => t.category === "Invest Deposit" || t.category === "Invest Withdraw");
   const inFunds = -fundTx.reduce((sum, t) => sum + t.amount, 0);
   return (
-    <SaveClient
-      remaining={safeToSpend(c).remaining}
-      asOf={c.asOf}
-      balance={last?.balance ?? 0}
-      inFunds={Math.max(0, inFunds)}
-      fundDeposits={fundTx.filter((t) => t.amount < 0).length}
-      savingsGoal={DEFAULT_SAVINGS_GOAL_PER_MONTH}
-    />
+    <Screen>
+      <SaveClient
+        remaining={safeToSpend(c).remaining}
+        asOf={c.asOf}
+        balance={last?.balance ?? 0}
+        inFunds={Math.max(0, inFunds)}
+        fundDeposits={fundTx.filter((t) => t.amount < 0).length}
+        savingsGoal={DEFAULT_SAVINGS_GOAL_PER_MONTH}
+      />
+    </Screen>
   );
 }

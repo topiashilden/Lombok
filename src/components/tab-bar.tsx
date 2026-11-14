@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { ViewTransition } from "react";
 import {
   House,
   MessageCircle,
@@ -62,11 +63,19 @@ export function TabBar() {
                     <Icon className="size-[22px]" aria-hidden />
                   </span>
                 ) : (
-                  <Icon
-                    className="size-[22px]"
-                    strokeWidth={active ? 2.25 : 1.75}
-                    aria-hidden
-                  />
+                  <span className="relative flex h-7 w-14 items-center justify-center">
+                    {/* The active pill glides from tab to tab (view transition, see globals.css). */}
+                    {active && (
+                      <ViewTransition name="tab-pill" share="tab-pill">
+                        <span className="absolute inset-0 rounded-full bg-accent" aria-hidden />
+                      </ViewTransition>
+                    )}
+                    <Icon
+                      className="relative size-[22px]"
+                      strokeWidth={active ? 2.25 : 1.75}
+                      aria-hidden
+                    />
+                  </span>
                 )}
                 {label}
               </Link>

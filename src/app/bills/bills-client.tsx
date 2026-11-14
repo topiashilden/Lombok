@@ -1,20 +1,49 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { addTransitionType, startTransition, useEffect, useMemo, useState } from "react";
+import { SubScreen } from "@/components/solvo/screen";
 import { ArrowRight, Cable, Check, FileText, Smartphone, Sparkles, Zap } from "lucide-react";
-import { BackButton, Chip, Group, IconTile, PAGE, PageTitle, TopBar, eur, eur2, primaryButton } from "@/components/solvo/ui";
+import {
+  BackButton,
+  Chip,
+  Group,
+  IconTile,
+  PAGE,
+  PageTitle,
+  TopBar,
+  eur,
+  eur2,
+  primaryButton,
+} from "@/components/solvo/ui";
 import { ApproveSheet, DoneView, EditField, OfferOption, ReadFields, SavingSlab, StickyAction } from "./switch-ui";
 import type { Reading } from "@/lib/einvoice";
 import { compare, type ContractTerms } from "@/lib/offers";
 import { SAVED_ELECTRICITY_DB, domainOf, type MarketDb } from "@/lib/market";
 import { compareTelecom, telecomTermsFrom } from "@/lib/telecom-offers";
-import { approveSwitch, cacheReading, readCachedReadings, useCachedReadings, useSavingsPlan, useSwitches, weeklyBoost, type BillKey, type SwitchRecord } from "@/lib/switches";
+import {
+  approveSwitch,
+  cacheReading,
+  readCachedReadings,
+  useCachedReadings,
+  useSavingsPlan,
+  useSwitches,
+  weeklyBoost,
+  type BillKey,
+  type SwitchRecord,
+} from "@/lib/switches";
 import { MarketAgentCard } from "./market-agent-card";
 import { PhotoUpload } from "./photo-upload";
 import { TelecomDetail } from "./telecom-detail";
 
 type InvoiceMeta = { id: string; payment: { date: string; amount: number } | null }; // null = read from a photo
-type Loaded = { reading: Reading; source: "gemini" | "saved"; model?: string; ms: number; cached?: boolean; fromPhoto?: boolean };
+type Loaded = {
+  reading: Reading;
+  source: "gemini" | "saved";
+  model?: string;
+  ms: number;
+  cached?: boolean;
+  fromPhoto?: boolean;
+};
 
 const dateFmt = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
 const fmtDate = (iso: string | null) => (iso ? dateFmt.format(new Date(`${iso}T00:00:00Z`)) : "–");
@@ -43,12 +72,7 @@ function termsFrom(r: Reading): ContractTerms {
   };
 }
 
-export function BillsClient(props: {
-  asOf: string;
-  invoices: InvoiceMeta[];
-  weeklyBudget: number;
-  remaining: number;
-}) {
+export function BillsClient(props: { asOf: string; invoices: InvoiceMeta[]; weeklyBudget: number; remaining: number }) {
   const [fetched, setLoaded] = useState<Record<string, Loaded>>({});
   const stored = useCachedReadings() as Record<string, Loaded>;
   // Readings from this visit win (they carry the reading time); earlier ones come from the device cache.
@@ -56,7 +80,13 @@ export function BillsClient(props: {
     const fromCache = Object.fromEntries(Object.entries(stored).map(([id, l]) => [id, { ...l, cached: true }]));
     return { ...fromCache, ...fetched };
   }, [stored, fetched]);
-  const [open, setOpen] = useState<string | null>(null);
+  const [open, setOpenState] = useState<string | null>(null);
+  // Opening a contract slides it in like a new screen; going back slides it out.
+  const setOpen = (id: string | null) =>
+    startTransition(() => {
+      addTransitionType(id ? "nav-forward" : "nav-back");
+      setOpenState(id);
+    });
   const [photos, setPhotos] = useState<InvoiceMeta[]>([]);
   const switches = useSwitches();
 
@@ -67,7 +97,11 @@ export function BillsClient(props: {
     const cached = readCachedReadings();
     for (const inv of props.invoices) {
       if (cached[inv.id]) continue;
-      fetch("/api/read-invoice", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id: inv.id }) })
+      fetch("/api/read-invoice", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ id: inv.id }),
+      })
         .then((r) => r.json())
         .then((d: Loaded) => {
           if (!d.reading) return;
@@ -92,46 +126,58 @@ export function BillsClient(props: {
     <main className={PAGE}>
       <TopBar back={open ? <BackButton onClick={() => setOpen(null)} label="Bills" /> : undefined} />
 
-      {open && openInvoice?.reading.kind === "telecom" ? (
-        <TelecomDetail
-          reading={openInvoice.reading}
-          badge={<SourceBadge l={openInvoice} />}
-          weeklyBudget={props.weeklyBudget}
-          remaining={props.remaining}
-          asOf={props.asOf}
-        />
-      ) : open && openInvoice ? (
-        <ElectricityDetail
-          loaded={openInvoice}
-          weeklyBudget={props.weeklyBudget}
-          remaining={props.remaining}
-          asOf={props.asOf}
-        />
-      ) : (
-        <>
-          <PageTitle title="Your bills">
-            Solvo read the e-invoices that reached your bank this month. Nothing to photograph or upload.
-          </PageTitle>
+      <SubScreen id={open && openInvoice ? open : "list"}>
+        <div className="flex flex-1 flex-col">
+          {open && openInvoice?.reading.kind === "telecom" ? (
+            <TelecomDetail
+              reading={openInvoice.reading}
+              badge={<SourceBadge l={openInvoice} />}
+              weeklyBudget={props.weeklyBudget}
+              remaining={props.remaining}
+              asOf={props.asOf}
+            />
+          ) : open && openInvoice ? (
+            <ElectricityDetail
+              loaded={openInvoice}
+              weeklyBudget={props.weeklyBudget}
+              remaining={props.remaining}
+              asOf={props.asOf}
+            />
+          ) : (
+            <>
+              <PageTitle title="Your bills">
+                Solvo read the e-invoices that reached your bank this month. Nothing to photograph or upload.
+              </PageTitle>
 
-          {actionable.map((inv) => (
-            <FeaturedInvoice key={inv.id} meta={inv} loaded={loaded[inv.id]!} onOpen={() => setOpen(inv.id)} />
-          ))}
+              {actionable.map((inv) => (
+                <FeaturedInvoice key={inv.id} meta={inv} loaded={loaded[inv.id]!} onOpen={() => setOpen(inv.id)} />
+              ))}
 
-          <Group title={actionable.length ? "Other bills" : "This month"} className={actionable.length ? "mt-7" : "mt-0"}>
-            {others.map((inv) => (
-              <InvoiceRow key={inv.id} meta={inv} loaded={loaded[inv.id]} switched={switchedFor(loaded[inv.id], switches)} />
-            ))}
-          </Group>
+              <Group
+                title={actionable.length ? "Other bills" : "This month"}
+                className={actionable.length ? "mt-7" : "mt-0"}
+              >
+                {others.map((inv) => (
+                  <InvoiceRow
+                    key={inv.id}
+                    meta={inv}
+                    loaded={loaded[inv.id]}
+                    switched={switchedFor(loaded[inv.id], switches)}
+                  />
+                ))}
+              </Group>
 
-          <PhotoUpload
-            onRead={(d) => {
-              const id = `photo-${photos.length + 1}`;
-              setLoaded((prev) => ({ ...prev, [id]: { ...d, source: "gemini", fromPhoto: true } }));
-              setPhotos((prev) => [...prev, { id, payment: null }]);
-            }}
-          />
-        </>
-      )}
+              <PhotoUpload
+                onRead={(d) => {
+                  const id = `photo-${photos.length + 1}`;
+                  setLoaded((prev) => ({ ...prev, [id]: { ...d, source: "gemini", fromPhoto: true } }));
+                  setPhotos((prev) => [...prev, { id, payment: null }]);
+                }}
+              />
+            </>
+          )}
+        </div>
+      </SubScreen>
     </main>
   );
 }
@@ -222,7 +268,9 @@ function InvoiceRow({ meta, loaded, switched }: { meta: InvoiceMeta; loaded?: Lo
         <div className="flex-1">
           <p className="text-[15px] font-medium text-muted-foreground">Reading e-invoice…</p>
           <p className="num mt-0.5 text-[13px] text-muted-foreground">
-            {meta.payment ? `Payment ${eur2.format(-meta.payment.amount)} on ${fmtDate(meta.payment.date)}` : "Your photo"}
+            {meta.payment
+              ? `Payment ${eur2.format(-meta.payment.amount)} on ${fmtDate(meta.payment.date)}`
+              : "Your photo"}
           </p>
           <div className="shimmer mt-2.5 h-2.5 w-3/4 rounded-full" />
         </div>
@@ -331,8 +379,18 @@ function ElectricityDetail(props: { loaded: Loaded; weeklyBudget: number; remain
         <EditField label="Yearly use" value={terms.annualKwh} unit="kWh" step="100" onChange={set("annualKwh")} />
         <EditField label="Price now" value={terms.centsPerKwh} unit="c/kWh" onChange={set("centsPerKwh")} />
         <EditField label="Base fee now" value={terms.monthlyFee} unit="€/mo" onChange={set("monthlyFee")} />
-        <EditField label={`Price after ${fmtDate(r.contractEndDate)}`} value={terms.centsAfterEnd} unit="c/kWh" onChange={set("centsAfterEnd")} />
-        <EditField label="Base fee after" value={terms.monthlyFeeAfterEnd} unit="€/mo" onChange={set("monthlyFeeAfterEnd")} />
+        <EditField
+          label={`Price after ${fmtDate(r.contractEndDate)}`}
+          value={terms.centsAfterEnd}
+          unit="c/kWh"
+          onChange={set("centsAfterEnd")}
+        />
+        <EditField
+          label="Base fee after"
+          value={terms.monthlyFeeAfterEnd}
+          unit="€/mo"
+          onChange={set("monthlyFeeAfterEnd")}
+        />
       </ReadFields>
 
       <Group
@@ -350,7 +408,9 @@ function ElectricityDetail(props: { loaded: Loaded; weeklyBudget: number; remain
               yearly={o.yearly}
               detail={
                 <>
-                  {o.pricing === "spot" ? `Spot, about ${o.centsPerKwh.toFixed(2)} c/kWh (margin ${o.marginCents?.toFixed(2)})` : `${o.centsPerKwh.toFixed(2)} c/kWh`}
+                  {o.pricing === "spot"
+                    ? `Spot, about ${o.centsPerKwh.toFixed(2)} c/kWh (margin ${o.marginCents?.toFixed(2)})`
+                    : `${o.centsPerKwh.toFixed(2)} c/kWh`}
                   {` + ${o.monthlyFee.toFixed(2)} €/mo`}
                   {o.termMonths ? `, fixed ${o.termMonths} months` : ""}
                   {o.note ? `. ${o.note}` : ""}
