@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, MessageCircle, ReceiptText, Users } from "lucide-react";
+import { ArrowRight, MessageCircle, ReceiptText } from "lucide-react";
 import { LiveWeeklyEuro, ResetDemoButton, SwitchBoostNote } from "@/components/live-budget";
 import { OverdueBillCard } from "@/components/overdue-bill";
 import { Chip, Group, IconTile, Logo, PAGE, Row, Slab, eur, primaryButton } from "@/components/solvo/ui";
@@ -128,21 +128,6 @@ export default function Home() {
           )}
         </div>
       </section>
-
-      {/* Peer-review hook */}
-      <Link
-        href="/like-you"
-        className="mt-4 flex min-h-14 items-center gap-3 rounded-2xl bg-card px-4 py-3 shadow-[0_1px_3px_rgba(15,42,31,0.06)] active:bg-muted"
-      >
-        <IconTile>
-          <Users />
-        </IconTile>
-        <span className="min-w-0 flex-1">
-          <span className="block text-[15px] font-medium">Find a customer like you</span>
-          <span className="block text-[13px] text-muted-foreground">Matched by age and postal code from 5,100 customers</span>
-        </span>
-        <ArrowRight className="size-[18px] text-muted-foreground" aria-hidden />
-      </Link>
 
       {/* How the number is built */}
       <Group
