@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ArrowRight, CalendarDays, MessageCircle, ReceiptText } from "lucide-react";
 import { LiveWeeklyEuro, ResetDemoButton, SwitchBoostNote } from "@/components/live-budget";
 import { AllBanksCard } from "@/components/all-banks-card";
+import { LiveNordnetCard } from "@/components/live-nordnet-card";
 import { OnboardingGate, PlanCard } from "@/components/onboarding-home";
 import { OverdueBillCard } from "@/components/overdue-bill";
 import { UpcomingCard } from "@/components/upcoming-card";
@@ -108,6 +109,8 @@ export default async function Home() {
         <PlanCard />
 
         <AllBanksCard base={base} banks={banks} view={view} />
+
+        {local && <LiveNordnetCard />}
 
         <UpcomingCard items={schedule.items} today={realToday} />
 

@@ -5,6 +5,7 @@
 
 # challenge datasets (cloned, not committed: 346 MB LFS file, own licence)
 data/s-pankki/
+data/private/
 
 # dependencies and build output
 node_modules/
