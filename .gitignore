@@ -23,3 +23,6 @@ out/
 *.tsbuildinfo
 next-env.d.ts
 *.pem
+
+# local https certificate from next dev --experimental-https
+/certificates

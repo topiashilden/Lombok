@@ -2,6 +2,7 @@ import { connection } from "next/server";
 import { Screen } from "@/components/solvo/screen";
 import { DEFAULT_SAVINGS_GOAL_PER_MONTH } from "@/lib/coach";
 import { MAIN_CUSTOMER } from "@/lib/demo";
+import { liveStatus } from "@/lib/live-nordea";
 import { getEffective } from "@/lib/source-banks";
 import { ProfileClient } from "./profile-client";
 
@@ -23,6 +24,7 @@ export default async function ProfilePage() {
         banks={banks}
         view={view}
         showBanks={!local}
+        live={liveStatus()}
       />
     </Screen>
   );
