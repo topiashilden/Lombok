@@ -7,10 +7,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import type { Reading } from "@/lib/einvoice";
 import { compare, OFFERS_UPDATED, type ContractTerms } from "@/lib/offers";
 import { approveSwitch, useSavingsPlan, useSwitches, weeklyBoost, type BillKey } from "@/lib/switches";
+import { PhotoUpload } from "./photo-upload";
 import { TelecomDetail } from "./telecom-detail";
 
-type InvoiceMeta = { id: string; payment: { date: string; amount: number } };
-type Loaded = { reading: Reading; source: "gemini" | "saved"; model?: string; ms: number; cached?: boolean };
+type InvoiceMeta = { id: string; payment: { date: string; amount: number } | null }; // null = read from a photo
+type Loaded = { reading: Reading; source: "gemini" | "saved"; model?: string; ms: number; cached?: boolean; fromPhoto?: boolean };
 
 const eur = new Intl.NumberFormat("fi-FI", { style: "currency", currency: "EUR", maximumFractionDigits: 0 });
 const eur2 = new Intl.NumberFormat("fi-FI", { style: "currency", currency: "EUR", minimumFractionDigits: 2 });
@@ -32,6 +33,7 @@ export function BillsClient(props: {
 }) {
   const [loaded, setLoaded] = useState<Record<string, Loaded>>({});
   const [open, setOpen] = useState<string | null>(null);
+  const [photos, setPhotos] = useState<InvoiceMeta[]>([]);
 
   useEffect(() => {
     for (const inv of props.invoices) {
@@ -83,9 +85,16 @@ export function BillsClient(props: {
               Solvo read the e-invoices that reached your bank this month. Nothing to photograph or upload.
             </p>
           </div>
-          {props.invoices.map((inv) => (
+          {[...props.invoices, ...photos].map((inv) => (
             <InvoiceCard key={inv.id} meta={inv} loaded={loaded[inv.id]} onOpen={() => setOpen(inv.id)} />
           ))}
+          <PhotoUpload
+            onRead={(d) => {
+              const id = `photo-${photos.length + 1}`;
+              setLoaded((prev) => ({ ...prev, [id]: { ...d, source: "gemini", fromPhoto: true } }));
+              setPhotos((prev) => [...prev, { id, payment: null }]);
+            }}
+          />
         </>
       )}
     </main>
@@ -95,7 +104,9 @@ export function BillsClient(props: {
 function SourceBadge({ l }: { l: Loaded }) {
   return (
     <span className="shrink-0 whitespace-nowrap rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">
-      {l.source === "gemini"
+      {l.fromPhoto
+        ? `Read from your photo · ${(l.ms / 1000).toFixed(1)} s`
+        : l.source === "gemini"
         ? `Read by Gemini${l.cached || !l.ms ? "" : ` · ${(l.ms / 1000).toFixed(1)} s`}`
         : "Saved reading (AI offline)"}
     </span>
@@ -112,7 +123,7 @@ function InvoiceCard({ meta, loaded, onOpen }: { meta: InvoiceMeta; loaded?: Loa
         <CardHeader>
           <CardDescription>Reading e-invoice…</CardDescription>
           <CardTitle className="text-muted-foreground">
-            Payment {eur2.format(-meta.payment.amount)} on {fmtDate(meta.payment.date)}
+            {meta.payment ? `Payment ${eur2.format(-meta.payment.amount)} on ${fmtDate(meta.payment.date)}` : "Your photo"}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -140,7 +151,10 @@ function InvoiceCard({ meta, loaded, onOpen }: { meta: InvoiceMeta; loaded?: Loa
       <CardContent className="flex flex-col gap-2">
         <p className="text-sm">{r.summary}</p>
         <p className="text-xs text-muted-foreground">
-          {r.product} · matched to your payment of {eur2.format(-meta.payment.amount)} on {fmtDate(meta.payment.date)}
+          {r.product} ·{" "}
+          {meta.payment
+            ? `matched to your payment of ${eur2.format(-meta.payment.amount)} on ${fmtDate(meta.payment.date)}`
+            : `from your photo, due ${fmtDate(r.dueDate)}`}
         </p>
         {switched && (
           <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
