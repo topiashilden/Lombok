@@ -79,6 +79,7 @@ export function BillsClient(props: {
   weeklyBudget: number;
   remaining: number;
   history: PaidBill[];
+  dentalBill: boolean; // Aino's unpaid dentist e-invoice, part of her demo story only
 }) {
   const [fetched, setLoaded] = useState<Record<string, Loaded>>({});
   const stored = useCachedReadings() as Record<string, Loaded>;
@@ -153,26 +154,30 @@ export function BillsClient(props: {
           ) : (
             <>
               <PageTitle title="Your bills">
-                Solvo read the e-invoices that reached your bank this month. Nothing to photograph or upload.
+                {props.invoices.length
+                  ? "Solvo read the e-invoices that reached your bank this month. Nothing to photograph or upload."
+                  : "No e-invoices from your suppliers have reached your bank yet. When one arrives, Solvo reads it here and compares the contract."}
               </PageTitle>
 
               {actionable.map((inv) => (
                 <FeaturedInvoice key={inv.id} meta={inv} loaded={loaded[inv.id]!} onOpen={() => setOpen(inv.id)} />
               ))}
 
-              <Group
-                title={actionable.length ? "Other bills" : "This month"}
-                className={actionable.length ? "mt-7" : "mt-0"}
-              >
-                {others.map((inv) => (
-                  <InvoiceRow
-                    key={inv.id}
-                    meta={inv}
-                    loaded={loaded[inv.id]}
-                    switched={switchedFor(loaded[inv.id], switches)}
-                  />
-                ))}
-              </Group>
+              {others.length > 0 && (
+                <Group
+                  title={actionable.length ? "Other bills" : "This month"}
+                  className={actionable.length ? "mt-7" : "mt-0"}
+                >
+                  {others.map((inv) => (
+                    <InvoiceRow
+                      key={inv.id}
+                      meta={inv}
+                      loaded={loaded[inv.id]}
+                      switched={switchedFor(loaded[inv.id], switches)}
+                    />
+                  ))}
+                </Group>
+              )}
 
               <PhotoUpload
                 onRead={(d) => {
@@ -182,7 +187,7 @@ export function BillsClient(props: {
                 }}
               />
 
-              <BillHistory bills={props.history} asOf={props.asOf} />
+              <BillHistory bills={props.history} asOf={props.asOf} dentalBill={props.dentalBill} />
             </>
           )}
         </div>

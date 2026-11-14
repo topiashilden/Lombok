@@ -2,7 +2,7 @@
 
 import { useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { Bookmark, Check, ExternalLink, Home, Pencil, PiggyBank, Plane, Plus, Sprout, Trash2, Wallet } from "lucide-react";
+import { Bookmark, Check, ExternalLink, Home, Landmark, LoaderCircle, Pencil, PiggyBank, Plane, Plus, ReceiptText, ShieldCheck, Sprout, Trash2, Wallet } from "lucide-react";
 import { ApproveSheet, StickyAction } from "@/app/bills/switch-ui";
 import { NumberField, Stepper } from "@/components/solvo/fields";
 import { MoneyBadge, SignedAmount } from "@/components/solvo/money-badge";
@@ -15,7 +15,7 @@ import { buildPlan, type Goal, type GoalKind, type PlanBase } from "@/lib/plan";
 import { STATUS_LABEL, type Profile, type Status } from "@/lib/profile";
 import { ordinal, type Item, type Schedule } from "@/lib/schedule";
 
-// First run, four steps: 1 your profile (accept it or fix it), 2 savings goals, 3 investing, 4 your plan.
+// First run. A new customer first connects their account (simulated in the demo), then four steps: 1 your profile (accept it or fix it), 2 savings goals, 3 investing, 4 your plan.
 // Output: a weekly spending budget, a monthly transfer to a savings account, a monthly room for investing, and what
 // Solvo would move on payday. Transfers are simulated in the demo and need the person's approval.
 
@@ -120,8 +120,21 @@ function ExternalCard({ title, by, href }: { title: string; by: string; href: st
 
 type SheetName = "situation" | "income" | "bills" | null;
 
-export function OnboardingClient({ profile, base, schedule, local }: { profile: Profile; base: Base; schedule: Schedule; local: boolean }) {
+export function OnboardingClient({
+  profile,
+  base,
+  schedule,
+  local,
+  askConnect,
+}: {
+  profile: Profile;
+  base: Base;
+  schedule: Schedule;
+  local: boolean;
+  askConnect: boolean;
+}) {
   const router = useRouter();
+  const [connect, setConnect] = useState<"ask" | "connecting" | "done">(askConnect ? "ask" : "done");
   const [step, setStep] = useState(1);
   const [sheet, setSheet] = useState<SheetName>(null);
   const [status, setStatus] = useState<Status>(profile.status);
@@ -202,6 +215,41 @@ export function OnboardingClient({ profile, base, schedule, local }: { profile: 
   );
   const wrap = `${PAGE} pb-[calc(6rem+env(safe-area-inset-bottom))]`;
   const localBanner = local && <p className="mt-2 rounded-md bg-red-950 px-3 py-2 text-center text-xs font-medium text-red-50">My Nordea data, local only.</p>;
+
+  // ---------- 0. Connect your account (demo: nothing is really connected) ----------
+  if (connect !== "done") {
+    const start = () => {
+      if (connect !== "ask") return;
+      setConnect("connecting");
+      setTimeout(() => setConnect("done"), 1600);
+    };
+    return (
+      <main className={wrap}>
+        <TopBar back={skip} />
+        <div key="s0" className={enter}>
+          <PageTitle title="Connect your account">
+            Solvo builds your plan from the payments and e-invoices that already reach your bank. You don&apos;t type anything in.
+          </PageTitle>
+          <Group title="Solvo will read" footer="Read only. Solvo never moves money or switches a contract without your tap, and you can disconnect any time.">
+            <Row icon={<IconTile><Landmark /></IconTile>} title="Your account and payments" subtitle="The last 24 months" />
+            <Row icon={<IconTile><ReceiptText /></IconTile>} title="E-invoices from your suppliers" subtitle="Electricity, phone, internet and others" />
+            <Row icon={<IconTile><ShieldCheck /></IconTile>} title="Nothing else" subtitle="No passwords, no other banks" />
+          </Group>
+          <p className="mt-4 px-1 text-[13px] leading-snug text-muted-foreground">Demo: no real connection is made. The data is a synthetic customer from S-Pankki&apos;s Junction dataset.</p>
+        </div>
+        <StickyAction onClick={start}>
+          {connect === "connecting" ? (
+            <>
+              <LoaderCircle className="size-[18px] animate-spin" aria-hidden />
+              Connecting…
+            </>
+          ) : (
+            "Connect"
+          )}
+        </StickyAction>
+      </main>
+    );
+  }
 
   // ---------- 1. Your profile ----------
   if (step === 1) {

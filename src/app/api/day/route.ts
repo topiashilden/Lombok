@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getSource } from "@/lib/source";
+import { getSource, requestMode } from "@/lib/source";
 
 // What actually happened on one day, for the calendar's day view. Only the asked-for day leaves the server, so the
 // phone never holds the whole transaction history.
@@ -9,11 +9,11 @@ export type DayResult = { date: string; spent: number; received: number; rows: D
 // Synthetic merchant ids look like "M123" and say nothing to a person; real names (real bank data) are worth showing.
 const looksLikeId = (m: string) => /\d/.test(m) && !/\s/.test(m);
 
-export function GET(req: Request) {
+export async function GET(req: Request) {
   const date = new URL(req.url).searchParams.get("date") ?? "";
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return NextResponse.json({ error: "Use ?date=YYYY-MM-DD" }, { status: 400 });
 
-  const { customer: c } = getSource();
+  const { customer: c } = getSource(await requestMode());
   const rows: DayRow[] = c.transactions
     .filter((t) => t.date === date && t.category !== "Transfer")
     .map((t) => {

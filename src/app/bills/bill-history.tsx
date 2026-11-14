@@ -28,7 +28,7 @@ type Entry = {
 };
 
 /** Every bill paid in the last 12 months (rent and utilities from the data), plus the dental e-invoice. */
-export function BillHistory({ bills, asOf }: { bills: PaidBill[]; asOf: string }) {
+export function BillHistory({ bills, asOf, dentalBill }: { bills: PaidBill[]; asOf: string; dentalBill: boolean }) {
   const [all, setAll] = useState(false);
   const dental = useBillActions()[UNPAID.id];
 
@@ -45,7 +45,7 @@ export function BillHistory({ bills, asOf }: { bills: PaidBill[]; asOf: string }
     amount: b.amount,
     badge: b.supplier ? "E-invoice" : undefined,
   }));
-  entries.push(
+  if (dentalBill) entries.push(
     dental?.action === "paid"
       ? {
           key: "dental",

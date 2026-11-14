@@ -50,6 +50,7 @@ type Props = {
   inFunds: number;
   fundDeposits: number;
   savingsGoal: number;
+  hasFunds: boolean; // Aino's fund holdings are demo data; the new customer has none
 };
 
 export function SaveClient(props: Props) {
@@ -67,7 +68,22 @@ export function SaveClient(props: Props) {
   const fund = fundById(fundId);
   const next = nextInvestDate(props.asOf);
 
-  const now = (
+  const account = (
+    <Row
+      icon={
+        <IconTile tone="grey">
+          <Landmark />
+        </IconTile>
+      }
+      title="On your account"
+      subtitle={`Cash, ${dateFmt.format(new Date(`${props.asOf}T00:00:00Z`))}`}
+      value={eur.format(props.balance)}
+    />
+  );
+
+  const now = !props.hasFunds ? (
+    <Group title="Your money">{account}</Group>
+  ) : (
     <>
       <Slab>
         <p className="text-[15px] text-white/70">Your funds are worth</p>
@@ -102,16 +118,7 @@ export function SaveClient(props: Props) {
             />
           );
         })}
-        <Row
-          icon={
-            <IconTile tone="grey">
-              <Landmark />
-            </IconTile>
-          }
-          title="On your account"
-          subtitle={`Cash, ${dateFmt.format(new Date(`${props.asOf}T00:00:00Z`))}`}
-          value={eur.format(props.balance)}
-        />
+        {account}
       </Group>
     </>
   );
@@ -178,12 +185,16 @@ export function SaveClient(props: Props) {
     <main className={PAGE}>
       <TopBar />
       <PageTitle title="Your investments">
-        How your S-Pankki funds are doing, and a monthly plan to keep them growing.
+        {props.hasFunds
+          ? "How your S-Pankki funds are doing, and a monthly plan to keep them growing."
+          : "You don't have funds yet. A small monthly plan is an easy way to start."}
       </PageTitle>
 
       {now}
 
-      <h2 className="mt-9 px-1 font-display text-[22px] font-semibold tracking-[-0.015em]">Start investing again</h2>
+      <h2 className="mt-9 px-1 font-display text-[22px] font-semibold tracking-[-0.015em]">
+        {props.hasFunds ? "Start investing again" : "Start investing"}
+      </h2>
       <p className="mt-1 px-1 text-[15px] leading-snug text-muted-foreground">
         Your monthly savings goal, plus what your cheaper bills free up.
       </p>
