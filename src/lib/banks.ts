@@ -24,6 +24,23 @@ export const PLATFORM_HOW: Record<Platform, string> = {
   eToro: "eToro lets a verified account create a read-only key in its settings. You would paste that key, and Solvo could only read.",
   "Another platform": "Most platforms have no open banking. You would share an export of your holdings, or a read-only key where the platform offers one.",
 };
+// The bank shown for the simulated second bank (the demo data stays the same whichever the person picks). Sanitised: it ends up in text.
+export const BANKNAME_COOKIE = "solvo_bankname";
+export const DEFAULT_BANKNAME = "Nordea";
+export const parseBankName = (raw: string | undefined | null): string => {
+  const v = raw ? decodeURIComponent(raw).trim() : "";
+  return /^[\p{L}\p{N} .&'-]{1,40}$/u.test(v) ? v : DEFAULT_BANKNAME;
+};
+export function writeBankNameCookie(name: string) {
+  document.cookie = `${BANKNAME_COOKIE}=${encodeURIComponent(name)}; path=/; max-age=31536000; samesite=lax`;
+}
+export function readBankNameCookie(): string {
+  return parseBankName(document.cookie.split("; ").find((c) => c.startsWith(`${BANKNAME_COOKIE}=`))?.slice(BANKNAME_COOKIE.length + 1));
+}
+
+// Finland's banks as Enable Banking lists them (docs, 14 Nov 2026), shown when the live list is not set up. Connecting one is simulated.
+export const FALLBACK_BANKS = ["OP", "Nordea", "S-Pankki", "Danske Bank", "Säästöpankki", "Aktia", "Ålandsbanken", "POP Pankki", "Oma Säästöpankki"];
+
 export const parsePlatform = (raw: string | undefined | null): Platform => {
   const v = raw ? decodeURIComponent(raw) : "";
   return PLATFORMS.find((p) => p === v) ?? "Nordnet";
@@ -47,6 +64,7 @@ export function writePlatformCookie(platform: Platform) {
 
 export function clearBanksCookie() {
   document.cookie = `${PLATFORM_COOKIE}=; path=/; max-age=0`;
+  document.cookie = `${BANKNAME_COOKIE}=; path=/; max-age=0`;
   document.cookie = `${BANKS_COOKIE}=; path=/; max-age=0`;
   document.cookie = `${VIEW_COOKIE}=; path=/; max-age=0`;
 }

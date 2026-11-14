@@ -11,7 +11,7 @@ import { portfolio } from "@/data/portfolio";
  * Home, only once another bank is connected: the whole money picture across banks, and what the other bank adds that S-Pankki
  * alone cannot see. DEMO data for the second bank and Nordnet (src/lib/second-bank.ts).
  */
-export function AllBanksCard({ base, banks, view, platform = "Nordnet" }: { base: DemoCustomer; banks: BankId[]; view: View; platform?: Platform }) {
+export function AllBanksCard({ base, banks, view, platform = "Nordnet", bankName = "Nordea" }: { base: DemoCustomer; banks: BankId[]; view: View; platform?: Platform; bankName?: string }) {
   if (!banks.length) return null;
   const f = bankFacts(base, banks);
   const funds = Math.round(portfolio().value);
@@ -30,7 +30,7 @@ export function AllBanksCard({ base, banks, view, platform = "Nordnet" }: { base
           <Row
             icon={<IconTile><Landmark /></IconTile>}
             title="Cash and savings"
-            subtitle={`S-Pankki ${eur.format(f.spankki.cash)}${f.nordea ? ` · Nordea ${eur.format(f.nordea.everyday + f.nordea.savings)}` : ""}`}
+            subtitle={`S-Pankki ${eur.format(f.spankki.cash)}${f.nordea ? ` · ${bankName} ${eur.format(f.nordea.everyday + f.nordea.savings)}` : ""}`}
             value={eur.format(cash)}
           />
           <Row
@@ -40,7 +40,7 @@ export function AllBanksCard({ base, banks, view, platform = "Nordnet" }: { base
             value={eur.format(invested)}
           />
           {f.nordea && f.nordea.sideIncomeMonthly > 0 && (
-            <Row icon={<MoneyBadge kind="in" />} title="Side income at Nordea" subtitle="S-Pankki can't see this" value={<SignedAmount kind="in" value={f.nordea.sideIncomeMonthly} />} valueSub="a month" />
+            <Row icon={<MoneyBadge kind="in" />} title={`Side income at ${bankName}`} subtitle="S-Pankki can't see this" value={<SignedAmount kind="in" value={f.nordea.sideIncomeMonthly} />} valueSub="a month" />
           )}
           {subs && (
             <Row icon={<IconTile><Repeat /></IconTile>} title="Subscriptions" subtitle={subs.names} value={<SignedAmount kind="out" value={subs.monthly} />} valueSub="a month" />

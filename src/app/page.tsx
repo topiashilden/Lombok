@@ -26,7 +26,7 @@ const BASKET_COLOR: Record<Basket, string> = { 1: "bg-chart-1", 2: "bg-chart-2",
 export default async function Home() {
   // Render per request: these pages show dates, and the demo clock reads the real date. See src/lib/demo-clock.ts.
   await connection();
-  const { base, customer: c, local, banks, view, platform } = await getEffective();
+  const { base, customer: c, local, banks, view, platform, bankName } = await getEffective();
   const s = safeToSpend(c);
   const schedule = scheduleFor(c);
   const bills = unknownBills(c);
@@ -110,7 +110,7 @@ export default async function Home() {
 
         <PlanCard />
 
-        <AllBanksCard base={base} banks={banks} view={view} platform={platform} />
+        <AllBanksCard base={base} banks={banks} view={view} platform={platform} bankName={bankName} />
 
         {local && <LiveNordnetCard />}
 

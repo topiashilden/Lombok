@@ -23,7 +23,7 @@ export async function LinkedBankCard() {
     // Shown below as a short notice, never as an error page.
   }
   return (
-    <Group title={linked.bank} className="mt-4" footer="Read live from Enable Banking. Demo: a test bank with example data. Not part of your S-Pankki budget.">
+    <Group title={`${linked.bank} (test bank)`} className="mt-4" footer="Read live from Enable Banking. Demo: a test bank with example data. Not part of your S-Pankki budget.">
       {!s ? (
         <Row icon={<IconTile tone="warn"><Landmark /></IconTile>} title="Couldn't read this bank right now" subtitle="Try Sync now on Profile." />
       ) : (

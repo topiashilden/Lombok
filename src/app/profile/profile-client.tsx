@@ -1,6 +1,5 @@
 "use client";
 
-import { LinkedBank } from "@/components/linked-bank";
 import { LiveNordea } from "@/components/live-nordea";
 import { OtherBanks } from "@/components/other-banks";
 import type { BankId, View } from "@/lib/banks";
@@ -237,9 +236,7 @@ export function ProfileClient(props: {
 
       <LiveNordea status={props.live} />
 
-      <LinkedBank {...props.linkedBank} />
-
-      {props.showBanks && <OtherBanks banks={props.banks} view={props.view} />}
+      {(props.showBanks || props.linkedBank.enabled) && <OtherBanks banks={props.showBanks ? props.banks : []} view={props.view} sandbox={props.linkedBank} live={props.live} />}
 
       <Group
         title="Your data"

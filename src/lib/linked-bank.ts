@@ -49,14 +49,15 @@ function requireSandbox(cfg: EbConfig): Promise<void> {
   return verified;
 }
 
-let bankCache: { at: number; banks: AspspSummary[] } | null = null;
+const bankCache = new Map<string, { at: number; banks: AspspSummary[] }>();
 export async function sandboxBanks(country = "FI"): Promise<AspspSummary[]> {
   const cfg = config();
   if (!cfg) throw new Error("Not configured");
   await requireSandbox(cfg);
-  if (bankCache && Date.now() - bankCache.at < 3_600_000) return bankCache.banks;
+  const hit = bankCache.get(country);
+  if (hit && Date.now() - hit.at < 3_600_000) return hit.banks;
   const banks = await listAspsps(cfg, country);
-  bankCache = { at: Date.now(), banks };
+  bankCache.set(country, { at: Date.now(), banks });
   return banks;
 }
 

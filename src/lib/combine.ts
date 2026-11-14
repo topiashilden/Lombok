@@ -70,13 +70,13 @@ export function bankFacts(base: DemoCustomer, banks: BankId[]) {
 }
 
 /** A paragraph for the coach when other banks are connected: what they add and that the numbers already include them. */
-export function banksNoteFor(base: DemoCustomer, banks: BankId[], platform: Platform = "Nordnet"): string {
+export function banksNoteFor(base: DemoCustomer, banks: BankId[], platform: Platform = "Nordnet", bankName = "Nordea"): string {
   const f = bankFacts(base, banks);
   const parts: string[] = [];
   if (f.nordea) {
     const bills = f.nordea.bills.map((b) => `${b.label} ${f.nordea ? "€" + b.monthly : ""}/month (${b.names})`).join("; ");
     parts.push(
-      `Nordea (demo data): everyday account €${f.nordea.everyday}, savings account €${f.nordea.savings}; side income €${f.nordea.sideIncomeMonthly}/month that S-Pankki cannot see; bills paid from Nordea: ${bills}; about €${f.nordea.movedBetweenAccountsMonthly}/month moves between her own accounts and to her investing platform (${platform}), which is saving, not spending.`,
+      `${bankName} (demo data): everyday account €${f.nordea.everyday}, savings account €${f.nordea.savings}; side income €${f.nordea.sideIncomeMonthly}/month that S-Pankki cannot see; bills paid from ${bankName}: ${bills}; about €${f.nordea.movedBetweenAccountsMonthly}/month moves between her own accounts and to her investing platform (${platform}), which is saving, not spending.`,
     );
   }
   if (f.nordnet) parts.push(`Separate investing platform, ${platform} (demo data): invested €${f.nordnet.invested}, worth €${f.nordnet.value}, €${f.nordnet.monthlyDeposit}/month deposits.`);
