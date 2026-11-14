@@ -3,6 +3,7 @@
 import { useSyncExternalStore } from "react";
 import { resetCalendar } from "@/lib/calendar-store";
 import { resetOnboarding } from "@/lib/onboarding-store";
+import { DEMO_COOKIE, type DemoMode } from "@/lib/demo-mode";
 
 // What the user has approved in this browser: contract switches and a monthly fund savings plan.
 // The demo has no backend, so both live in localStorage: approve a switch in Bills and the
@@ -99,7 +100,7 @@ export function clearCachedReadings() {
 
 // Which demo account the app shows. "aino" (default): the finished account, no onboarding prompt.
 // "new": a first-time customer; starts from a clean slate and goes through onboarding.
-export type DemoMode = "aino" | "new";
+export type { DemoMode };
 const modeStore = createStore<{ mode?: DemoMode }>("solvo.demo-mode.v1", {});
 export const readDemoMode = (): DemoMode => modeStore.snapshot().mode ?? "aino";
 export const useDemoMode = (): DemoMode => modeStore.use().mode ?? "aino";
@@ -109,6 +110,21 @@ export function setDemoMode(mode: DemoMode) {
   resetDemo();
   if (mode === "new") readingStore.set(null);
   modeStore.set(mode === "aino" ? null : { mode });
+  writeDemoCookie(mode);
+}
+
+// The server reads this cookie to pick the customer's bank data.
+function writeDemoCookie(mode: DemoMode) {
+  document.cookie =
+    mode === "new" ? `${DEMO_COOKIE}=new; path=/; max-age=31536000; samesite=lax` : `${DEMO_COOKIE}=; path=/; max-age=0`;
+}
+
+/** Makes the cookie match this browser's demo account (it may predate the cookie). True if it had to change. */
+export function syncDemoCookie() {
+  const mode = readDemoMode();
+  if (document.cookie.split("; ").includes(`${DEMO_COOKIE}=new`) === (mode === "new")) return false;
+  writeDemoCookie(mode);
+  return true;
 }
 
 export const useSwitches = switchStore.use;

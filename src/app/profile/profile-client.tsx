@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 
 import {
   Bell,
@@ -46,7 +45,6 @@ export function ProfileClient(props: {
   postalCode: string;
   savingsGoal: number;
 }) {
-  const router = useRouter();
   const mode = useDemoMode();
   const switches = Object.values(useSwitches()).filter((s) => !!s);
   const plan = useSavingsPlan();
@@ -73,7 +71,7 @@ export function ProfileClient(props: {
             {name}
           </h1>
           <p className="text-[15px] text-muted-foreground">
-            {mode === "new" ? "First time in Solvo" : `${props.age} years, ${props.postalCode} Espoo`}
+            {props.age} years, {props.postalCode} Espoo{mode === "new" ? ", first time in Solvo" : ""}
           </p>
         </div>
       </section>
@@ -82,7 +80,7 @@ export function ProfileClient(props: {
         title="Demo account"
         footer={
           mode === "new"
-            ? "A first-time customer goes through onboarding. Same synthetic bank data as Aino, starting from scratch."
+            ? "A first-time customer with their own bank data (another customer in the S-Pankki dataset). Starts with onboarding."
             : "Switching starts the account from scratch: approvals and plans are cleared."
         }
       >
@@ -101,7 +99,8 @@ export function ProfileClient(props: {
               onClick={() => {
                 if (m === mode) return;
                 setDemoMode(m);
-                router.push(m === "new" ? "/onboarding" : "/");
+                // A full load, so every screen is rendered again from the other customer's data.
+                window.location.assign(m === "new" ? "/onboarding" : "/");
               }}
               className={`flex min-h-14 flex-1 flex-col items-start justify-center rounded-xl px-3 py-2 text-left ${mode === m ? "bg-primary text-primary-foreground" : "bg-muted"}`}
             >

@@ -3,7 +3,9 @@ import { portfolio } from "@/data/portfolio";
 import { UNPAID } from "@/data/reminders";
 import { fundById } from "@/lib/funds";
 import { safeToSpend } from "@/lib/coach";
-import { BASKET_LABELS, MAIN_CUSTOMER, type Basket } from "@/lib/demo";
+import { BASKET_LABELS, type Basket, type DemoCustomer } from "@/lib/demo";
+import type { DemoMode } from "@/lib/demo-mode";
+import { getSource, requestMode } from "@/lib/source";
 import { compare } from "@/lib/offers";
 import { MERCHANT_TYPE_NAMES, spending, type SpendingQuery, type SpendingResult } from "@/lib/spending";
 
@@ -22,11 +24,10 @@ type ChatMessage = { role: "user" | "coach"; text: string };
 type Part = { text?: string; functionCall?: { name: string; args?: SpendingQuery; id?: string }; thoughtSignature?: string };
 type Content = { role: "user" | "model"; parts: Record<string, unknown>[] };
 
-const c = MAIN_CUSTOMER;
-const CATEGORIES = Object.keys(c.basketOf).sort();
 const eur = (n: number) => `€${Math.round(n).toLocaleString("en-US")}`;
 
-function customerContext() {
+// Aino's demo story adds synthetic e-invoices, the dentist bill and fund holdings. The new customer has only bank data.
+function customerContext(c: DemoCustomer, mode: DemoMode) {
   const s = safeToSpend(c);
   const el = SAVED_READINGS.electricity;
   const pf = portfolio();
@@ -48,7 +49,7 @@ function customerContext() {
     .map((r) => `- ${r.supplier}, ${r.product}: ${eur(r.monthlyCost)}/month. ${r.summary}`)
     .join("\n");
 
-  return `Customer: age ${c.age}, postal code ${c.postalCode} (Espoo). Today is ${c.asOf}. Data covers ${c.transactions[0].date} to ${c.asOf}.
+  const common = `Customer: age ${c.age}, postal code ${c.postalCode} (Espoo). Today is ${c.asOf}. Data covers ${c.transactions[0].date} to ${c.asOf}.
 
 Safe to spend this week (Monday ${s.weekStart} to Sunday): ${eur(s.remaining)} left of a ${eur(s.weeklyBudget)} weekly everyday budget, ${eur(s.spentThisWeek)} spent so far, ${s.daysLeft} days left. Built from: salary ${eur(s.incomePerMonth)}/month, minus fixed and regular bills ${eur(s.fixedRegularPerMonth)}, minus set-aside for irregular costs ${eur(s.irregularSetAsidePerMonth)}, minus savings goal ${eur(s.savingsGoalPerMonth)} (an assumption the user can change). They usually spend ${eur(s.usualWeeklyEveryday)} a week on everyday things.
 
@@ -56,7 +57,13 @@ Three baskets, last 12 months:
 ${baskets}
 
 By category, last 12 months:
-${byCategory}
+${byCategory}`;
+  if (mode !== "aino") {
+    return `${common}
+
+No e-invoices from suppliers have reached the bank yet, so Solvo hasn't read any contracts. Utility payments in the data carry no supplier name. No fund holdings. The Save tab can set up a monthly plan. Never recommend a specific fund or predict returns: Solvo doesn't give investment advice.`;
+  }
+  return `${common}
 
 Bills Solvo has read from the e-invoices in the bank:
 ${bills}
@@ -67,7 +74,7 @@ Unpaid bill: ${UNPAID.supplier}, ${eur(UNPAID.amount)} (${UNPAID.what}), was due
 Fund holdings (S-Pankki funds, demo values): ${pf.holdings.map((h) => `${fundById(h.fundId).name}, put in ${eur(h.invested)} since ${h.since}, worth ${eur(h.value)} (${h.yearChangePct.toFixed(1)} % in 12 months)`).join("; ")}. Total worth ${eur(pf.value)} on ${eur(pf.invested)} put in (${pf.gainPct.toFixed(1)} %), ${pf.yearChangePct.toFixed(1)} % in the last 12 months. No new fund deposits since 2023. The Save tab can set up a monthly plan. Never recommend a specific fund or predict returns: Solvo doesn't give investment advice.`;
 }
 
-const SYSTEM = `You are Solvo, a friendly money coach inside the S-Pankki bank app. You talk to one customer about their own money.
+const system = (c: DemoCustomer, mode: DemoMode) => `You are Solvo, a friendly money coach inside the S-Pankki bank app. You talk to one customer about their own money.
 
 Rules:
 - Answer in the language the user writes in (Finnish or English).
@@ -79,9 +86,9 @@ Rules:
 - You never move money or switch contracts yourself. Switches happen only when the user approves them in the app.
 - No investment, loan or tax advice. Say a human advisor at S-Pankki can help.
 
-${customerContext()}`;
+${customerContext(c, mode)}`;
 
-const TOOLS = [
+const tools = (c: DemoCustomer) => [
   {
     functionDeclarations: [
       {
@@ -91,7 +98,7 @@ const TOOLS = [
         parameters: {
           type: "OBJECT",
           properties: {
-            category: { type: "STRING", enum: CATEGORIES, description: "Broad spending category." },
+            category: { type: "STRING", enum: Object.keys(c.basketOf).sort(), description: "Broad spending category." },
             merchantType: { type: "STRING", enum: MERCHANT_TYPE_NAMES, description: "Specific kind of merchant, e.g. Taxis." },
             from: { type: "STRING", description: "Start date YYYY-MM-DD, inclusive. Default: 12 months ago." },
             to: { type: "STRING", description: "End date YYYY-MM-DD, inclusive. Default: today." },
@@ -103,14 +110,16 @@ const TOOLS = [
   },
 ];
 
-async function gemini(model: string, contents: Content[], key: string, signal: AbortSignal) {
+type Ctx = { c: DemoCustomer; mode: DemoMode };
+
+async function gemini(ctx: Ctx, model: string, contents: Content[], key: string, signal: AbortSignal) {
   const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
     method: "POST",
     headers: { "Content-Type": "application/json", "x-goog-api-key": key },
     body: JSON.stringify({
-      systemInstruction: { parts: [{ text: SYSTEM }] },
+      systemInstruction: { parts: [{ text: system(ctx.c, ctx.mode) }] },
       contents,
-      tools: TOOLS,
+      tools: tools(ctx.c),
       generationConfig: { temperature: 0.3, thinkingConfig: { thinkingLevel: "low" } },
     }),
     signal,
@@ -122,12 +131,12 @@ async function gemini(model: string, contents: Content[], key: string, signal: A
   return content as { role: "model"; parts: Part[] };
 }
 
-async function askGemini(messages: ChatMessage[], key: string) {
+async function askGemini(ctx: Ctx, messages: ChatMessage[], key: string) {
   const signal = AbortSignal.timeout(DEADLINE_MS);
   let lastError: unknown;
   for (const model of MODELS) {
     try {
-      return { ...(await converse(model, messages, key, signal)), model };
+      return { ...(await converse(ctx, model, messages, key, signal)), model };
     } catch (e) {
       lastError = e;
       const status = (e as { status?: number }).status;
@@ -137,7 +146,7 @@ async function askGemini(messages: ChatMessage[], key: string) {
   throw lastError;
 }
 
-async function converse(model: string, messages: ChatMessage[], key: string, signal: AbortSignal) {
+async function converse(ctx: Ctx, model: string, messages: ChatMessage[], key: string, signal: AbortSignal) {
   const contents: Content[] = messages.map((m) => ({
     role: m.role === "user" ? "user" : "model",
     parts: [{ text: m.text }],
@@ -145,7 +154,7 @@ async function converse(model: string, messages: ChatMessage[], key: string, sig
   const checks: SpendingResult[] = [];
 
   for (let round = 0; round <= MAX_TOOL_ROUNDS; round++) {
-    const reply = await gemini(model, contents, key, signal);
+    const reply = await gemini(ctx, model, contents, key, signal);
     const calls = reply.parts.filter((p) => p.functionCall);
     if (!calls.length || round === MAX_TOOL_ROUNDS) {
       const answer = reply.parts
@@ -160,7 +169,7 @@ async function converse(model: string, messages: ChatMessage[], key: string, sig
     contents.push({
       role: "user",
       parts: calls.map(({ functionCall }) => {
-        const result = spending(c, functionCall!.args ?? {});
+        const result = spending(ctx.c, functionCall!.args ?? {});
         checks.push(result);
         return { functionResponse: { name: functionCall!.name, id: functionCall!.id, response: { result } } };
       }),
@@ -183,7 +192,7 @@ const KEYWORDS: [RegExp, SpendingQuery][] = [
   [/travel|matka|hotel/i, { category: "Travel" }],
 ];
 
-function offlineAnswer(question: string) {
+function offlineAnswer(c: DemoCustomer, question: string) {
   const fi = /[äö]|paljon|kuinka|mihin/i.test(question);
   const hit = KEYWORDS.find(([re]) => re.test(question));
   if (!hit) {
@@ -213,15 +222,16 @@ export async function POST(request: Request) {
   const last = messages.at(-1);
   if (!last || last.role !== "user") return Response.json({ error: "No question" }, { status: 400 });
 
+  const { customer: c, mode } = getSource(await requestMode());
   const started = Date.now();
   const key = process.env.GEMINI_API_KEY;
   if (key) {
     try {
-      const out = await askGemini(messages, key);
+      const out = await askGemini({ c, mode }, messages, key);
       return Response.json({ ...out, source: "gemini", ms: Date.now() - started });
     } catch (e) {
-      return Response.json({ ...offlineAnswer(last.text), source: "offline", ms: Date.now() - started, error: String(e) });
+      return Response.json({ ...offlineAnswer(c, last.text), source: "offline", ms: Date.now() - started, error: String(e) });
     }
   }
-  return Response.json({ ...offlineAnswer(last.text), source: "offline", ms: 0, error: "GEMINI_API_KEY not set" });
+  return Response.json({ ...offlineAnswer(c, last.text), source: "offline", ms: 0, error: "GEMINI_API_KEY not set" });
 }

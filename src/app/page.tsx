@@ -1,5 +1,6 @@
 import { Screen } from "@/components/solvo/screen";
 import Link from "next/link";
+import { Suspense } from "react";
 import { ArrowRight, CalendarDays, MessageCircle, ReceiptText } from "lucide-react";
 import { LiveWeeklyEuro, ResetDemoButton, SwitchBoostNote } from "@/components/live-budget";
 import { OnboardingGate, PlanCard } from "@/components/onboarding-home";
@@ -9,7 +10,7 @@ import { Chip, Group, IconTile, Logo, PAGE, Row, Slab, eur, primaryButton } from
 import { safeToSpend, topCategories, unknownBills } from "@/lib/coach";
 import { BASKET_LABELS, type Basket } from "@/lib/demo";
 import { inferSchedule } from "@/lib/schedule";
-import { getSource } from "@/lib/source";
+import { getSource, pageMode } from "@/lib/source";
 
 const dateFmt = new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
 const fmtDate = (iso: string) => dateFmt.format(new Date(`${iso}T00:00:00Z`));
@@ -18,7 +19,15 @@ const DAYS = ["M", "T", "W", "T", "F", "S", "S"];
 const BASKET_COLOR: Record<Basket, string> = { 1: "bg-chart-1", 2: "bg-chart-2", 3: "bg-chart-4" };
 
 export default function Home() {
-  const { customer: c, local } = getSource();
+  return (
+    <Suspense fallback={<main className={PAGE} />}>
+      <HomeScreen />
+    </Suspense>
+  );
+}
+
+async function HomeScreen() {
+  const { customer: c, local, mode } = getSource(await pageMode());
   const s = safeToSpend(c);
   const schedule = inferSchedule(c);
   const bills = unknownBills(c);
@@ -95,7 +104,8 @@ export default function Home() {
           <SwitchBoostNote className="mt-2 text-[13px] font-semibold text-mint" />
         </Slab>
 
-        <OverdueBillCard asOf={c.asOf} />
+        {/* The dentist e-invoice and its call are part of Aino's demo story only. */}
+        {mode === "aino" && <OverdueBillCard asOf={c.asOf} />}
 
         <PlanCard />
 

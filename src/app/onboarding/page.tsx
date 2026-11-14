@@ -1,6 +1,8 @@
+import { Suspense } from "react";
+import { PAGE } from "@/components/solvo/ui";
 import { inferProfile } from "@/lib/profile";
 import { inferSchedule } from "@/lib/schedule";
-import { getSource } from "@/lib/source";
+import { getSource, pageMode } from "@/lib/source";
 import { OnboardingClient } from "./onboarding-client";
 
 export const metadata = { title: "Your plan · Solvo" };
@@ -8,7 +10,15 @@ export const metadata = { title: "Your plan · Solvo" };
 // Runs on the server: the transactions never reach the phone, only the profile, the usual dates and a few
 // monthly numbers.
 export default function OnboardingPage() {
-  const { customer: c, local } = getSource();
+  return (
+    <Suspense fallback={<main className={PAGE} />}>
+      <Onboarding />
+    </Suspense>
+  );
+}
+
+async function Onboarding() {
+  const { customer: c, local, mode } = getSource(await pageMode());
   const profile = inferProfile(c);
   const schedule = inferSchedule(c);
   const base = {
@@ -20,5 +30,5 @@ export default function OnboardingPage() {
     cashBalance: profile.cashBalance === null ? null : Math.round(profile.cashBalance),
     investsMonthlyToday: Math.round(profile.investsMonthly),
   };
-  return <OnboardingClient profile={profile} base={base} schedule={schedule} local={local} />;
+  return <OnboardingClient profile={profile} base={base} schedule={schedule} local={local} askConnect={mode === "new"} />;
 }
