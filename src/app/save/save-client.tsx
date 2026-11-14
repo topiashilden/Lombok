@@ -195,12 +195,12 @@ export function SaveClient(props: Props) {
             fromBills < freed ? (
               `The rest of the bill savings, ${eur.format(((freed - fromBills) * 12) / 52)} a week, stays in your budget.`
             ) : (
-              "Your weekly budget stays the same: this money was never in it."
+              `Your cheaper bills had added ${eur.format((freed * 12) / 52)} a week to your budget. That now goes to your fund instead.`
             )
           ) : (
             <>
               Switch a bill to add more.{" "}
-              <Link href="/bills" className="font-medium text-primary underline underline-offset-4">
+              <Link href="/bills" className="-my-3 inline-flex min-h-11 items-center font-medium text-primary underline underline-offset-4">
                 See your bills
               </Link>
             </>

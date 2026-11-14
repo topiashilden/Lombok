@@ -6,6 +6,8 @@ import { cn } from "cn";
 
 export const eur = new Intl.NumberFormat("fi-FI", { style: "currency", currency: "EUR", maximumFractionDigits: 0 });
 export const eur2 = new Intl.NumberFormat("fi-FI", { style: "currency", currency: "EUR", minimumFractionDigits: 2 });
+/** A price with two decimals and a Finnish decimal comma (9,89), matching how eur/eur2 show money everywhere else. */
+export const dec2 = (n: number) => n.toLocaleString("fi-FI", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 /** Page padding that respects the notch and home bar. */
 export const PAGE = "flex flex-1 flex-col px-4 pt-[calc(0.75rem+env(safe-area-inset-top))] pb-[calc(2rem+var(--tabbar-h))]";

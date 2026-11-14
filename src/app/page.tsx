@@ -112,8 +112,9 @@ export default function Home() {
                 <span className="num">{eur.format(bills.perYear)}</span> a year goes to bills your bank can&apos;t name
               </p>
               <p className="mt-2 text-[14px] leading-snug text-muted-foreground">
-                {Math.round(bills.withoutMerchant * 100)}% of these {Math.round(bills.paymentsPerMonth)} monthly
-                payments have no merchant or contract attached. Solvo reads the e-invoices to find out what you pay for,
+                {bills.withoutMerchant === 1
+                  ? `None of these ${Math.round(bills.paymentsPerMonth)} payments a month name the company or the contract.`
+                  : `${Math.round(bills.withoutMerchant * 100)}% of these ${Math.round(bills.paymentsPerMonth)} payments a month don't name the company or the contract.`} Solvo reads the e-invoices to find out what you pay for,
                 and whether you&apos;re overpaying.
               </p>
             </div>
@@ -146,7 +147,7 @@ export default function Home() {
                 key={q}
                 href={`/coach?q=${encodeURIComponent(q)}`}
                 transitionTypes={["nav-forward"]}
-                className="flex h-9 shrink-0 items-center rounded-full border border-border bg-card/60 px-3.5 text-[13px] font-medium whitespace-nowrap text-foreground/80 active:bg-muted"
+                className="flex h-11 shrink-0 items-center rounded-full border border-border bg-card/60 px-3.5 text-[13px] font-medium whitespace-nowrap text-foreground/80 active:bg-muted"
               >
                 {q}
               </Link>
@@ -162,7 +163,7 @@ export default function Home() {
             <>
               You usually spend {eur.format(s.usualWeeklyEveryday)} a week on everyday things.
               {s.usualWeeklyEveryday > s.weeklyBudget
-                ? ` That's ${eur.format(s.usualWeeklyEveryday - s.weeklyBudget)} more than your budget allows.`
+                ? ` That's ${eur.format(Math.round(s.usualWeeklyEveryday) - Math.round(s.weeklyBudget))} more than your budget allows.`
                 : " That fits your budget."}
             </>
           }
