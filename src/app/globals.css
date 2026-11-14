@@ -7,9 +7,15 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-body);
   --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-geist-sans);
+  --font-heading: var(--font-display);
+  --font-display: var(--font-display);
+  --color-slab: var(--slab);
+  --color-slab-2: var(--slab-2);
+  --color-mint: var(--mint);
+  --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -49,38 +55,46 @@
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  /* Solvo palette: cool frost paper, deep spruce ink, the logo's money green. */
+  --background: #f2f4f1; /* frost: page */
+  --foreground: #0f2a1f; /* spruce ink: text */
+  --card: #ffffff;
+  --card-foreground: #0f2a1f;
+  --popover: #ffffff;
+  --popover-foreground: #0f2a1f;
+  --primary: #13623f; /* money green, matches the logo */
+  --primary-foreground: #ffffff;
+  --secondary: #e6ebe6;
+  --secondary-foreground: #0f2a1f;
+  --muted: #e9ede8;
+  --muted-foreground: #5d6e65;
+  --accent: #e3f4e8;
+  --accent-foreground: #0d4a2f;
+  --destructive: #b8402a;
+  --border: #dde3dd;
+  --input: #d3dbd4;
+  --ring: #13623f;
+  --chart-1: #13623f;
+  --chart-2: #5fb985;
+  --chart-3: #c3e6cf;
+  --chart-4: #e0a43a;
+  --chart-5: #b8402a;
+  --radius: 0.875rem;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #0f2a1f;
+  --sidebar-primary: #13623f;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #e9ede8;
+  --sidebar-accent-foreground: #0f2a1f;
+  --sidebar-border: #dde3dd;
+  --sidebar-ring: #13623f;
+
+  /* Solvo-only tokens */
+  --slab: #0c3524; /* the deep green of the hero slab */
+  --slab-2: #134a33;
+  --mint: #8fe3b0; /* positive numbers on the slab */
+  --warn: #b5731a; /* "you're overpaying" */
+  --warn-soft: #fbf1df;
 }
 
 .dark {
@@ -133,7 +147,7 @@
     @apply font-sans;
     /* Don't let iOS inflate text after rotation; the page colour shows in rubber-band overscroll. */
     -webkit-text-size-adjust: 100%;
-    background: var(--muted);
+    background: #e4e9e4;
   }
   body {
     @apply bg-background text-foreground;
@@ -152,5 +166,85 @@
   button,
   [role="button"] {
     touch-action: manipulation;
+  }
+}
+/* Numbers: tabular and slightly tightened, so amounts line up and read as money. */
+@utility num {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1, "lnum" 1;
+}
+
+/* Inputs styled as editable values in a list row (the e-invoice fields). */
+@utility field-inline {
+  appearance: textfield;
+  -moz-appearance: textfield;
+  &::-webkit-outer-spin-button,
+  &::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+}
+
+/* One orchestrated moment: the safe-to-spend figure rises in once on load. */
+@keyframes solvo-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+    filter: blur(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+@keyframes solvo-fill {
+  from {
+    transform: scaleX(0);
+  }
+}
+@keyframes solvo-pop {
+  0% {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.08);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+@keyframes solvo-shimmer {
+  from {
+    background-position: 150% 0;
+  }
+  to {
+    background-position: -50% 0;
+  }
+}
+@utility animate-rise {
+  animation: solvo-rise 700ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@utility animate-fill {
+  transform-origin: left;
+  animation: solvo-fill 900ms cubic-bezier(0.2, 0.8, 0.2, 1) 200ms both;
+}
+@utility animate-pop {
+  animation: solvo-pop 500ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@utility shimmer {
+  background: linear-gradient(90deg, var(--muted) 0%, #f6f8f5 50%, var(--muted) 100%);
+  background-size: 200% 100%;
+  animation: solvo-shimmer 1.4s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }
