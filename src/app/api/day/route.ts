@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { isLoopbackRequest } from "@/lib/loopback";
 import { getSource } from "@/lib/source";
 
 // What actually happened on one day, for the calendar's day view. Only the asked-for day leaves the server, so the
@@ -13,7 +14,9 @@ export function GET(req: Request) {
   const date = new URL(req.url).searchParams.get("date") ?? "";
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return NextResponse.json({ error: "Use ?date=YYYY-MM-DD" }, { status: 400 });
 
-  const { customer: c } = getSource();
+  const { customer: c, local } = getSource();
+  // Real bank data answers only to this computer.
+  if (local && !isLoopbackRequest(req)) return NextResponse.json({ error: "Live bank data only works on this computer." }, { status: 403 });
   const rows: DayRow[] = c.transactions
     .filter((t) => t.date === date && t.category !== "Transfer")
     .map((t) => {

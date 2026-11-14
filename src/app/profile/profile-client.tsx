@@ -1,7 +1,9 @@
 "use client";
 
+import { LiveNordea } from "@/components/live-nordea";
 import { OtherBanks } from "@/components/other-banks";
 import type { BankId, View } from "@/lib/banks";
+import type { LiveStatus } from "@/lib/live-nordea";
 import { useRouter } from "next/navigation";
 
 import {
@@ -49,7 +51,8 @@ export function ProfileClient(props: {
   savingsGoal: number;
   banks: BankId[];
   view: View;
-  showBanks: boolean; // hidden in local Nordea mode: real data is never merged with the demo banks
+  showBanks: boolean; // hidden once real Nordea data is connected: real data is never merged with the demo banks
+  live: LiveStatus; // the real, local-only Nordea connection; renders nothing unless the app runs with SOLVO_LIVE=1
 }) {
   const router = useRouter();
   const mode = useDemoMode();
@@ -229,6 +232,8 @@ export function ProfileClient(props: {
           Read my {readCount} e-invoices again with Gemini
         </button>
       )}
+
+      <LiveNordea status={props.live} />
 
       {props.showBanks && <OtherBanks banks={props.banks} view={props.view} />}
 
