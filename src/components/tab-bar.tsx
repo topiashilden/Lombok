@@ -19,8 +19,8 @@ const TABS = [
   { href: "/profile", label: "Profile", Icon: UserRound },
 ] as const;
 
-// Full-screen pages with no tab bar.
-const HIDDEN = ["/call"];
+// Full-screen pages with no tab bar. Onboarding: the tabs appear only once the person has a plan or skips.
+const HIDDEN = ["/call", "/onboarding"];
 
 /**
  * Bottom tab bar, like a native app. Its height is --tabbar-h (globals.css), which pages and fixed action bars use
