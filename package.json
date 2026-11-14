@@ -7,7 +7,8 @@
     "dev:nordea": "SOLVO_SOURCE=nordea next dev -H 127.0.0.1",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "smoke": "node scripts/smoke-test.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",
