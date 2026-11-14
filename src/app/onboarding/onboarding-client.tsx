@@ -14,6 +14,7 @@ import { SPANKKI_FUNDS_FETCHED } from "@/lib/spankki-funds";
 import { buildPlan, type Goal, type GoalKind, type PlanBase } from "@/lib/plan";
 import { STATUS_LABEL, type Profile, type Status } from "@/lib/profile";
 import { ordinal, type Item, type Schedule } from "@/lib/schedule";
+import { useUrlStep } from "@/lib/use-url-step";
 
 // First run. A new customer first connects their account (simulated in the demo), then four steps: 1 your profile (accept it or fix it), 2 savings goals, 3 investing, 4 your plan.
 // Output: a weekly spending budget, a monthly transfer to a savings account, a monthly room for investing, and what
@@ -158,8 +159,10 @@ export function OnboardingClient({
   const { matches, why } = matchFunds(prefs);
   const saved = CATALOG.filter((f) => savedFunds.includes(f.id));
 
-  const next = () => setStep((s) => Math.min(STEPS, s + 1));
-  const back = () => setStep((s) => Math.max(1, s - 1));
+  // Each step is its own history entry (?step=2), so the iPhone's swipe back goes to the previous step, not Home.
+  const url = useUrlStep("step", (v) => setStep(Math.min(STEPS, Math.max(1, Number(v) || 1))));
+  const next = () => url.push(String(Math.min(STEPS, step + 1)));
+  const back = () => url.back(step > 2 ? String(step - 1) : null);
   const leave = () => {
     skipOnboarding();
     router.push("/");
