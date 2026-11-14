@@ -1,5 +1,7 @@
-// Electricity offers. Hand-maintained, FICTIONAL providers and prices (there is no open price API in Finland).
-// To be replaced by live offers (Exa or Context.dev) later. All prices include VAT.
+// Electricity offers and the comparison. Offers come from Solvo's market database
+// (src/lib/market.ts), which the electricity market agent fills with real public prices and their sources.
+// All prices include VAT. Switching itself is simulated in this demo.
+import { SAVED_ELECTRICITY_DB, offerYearly, shortlistFor, type MarketDb, type Segment } from "./market";
 
 export type ElectricityOffer = {
   id: string;
@@ -7,19 +9,15 @@ export type ElectricityOffer = {
   product: string;
   pricing: "fixed" | "spot";
   centsPerKwh: number; // for spot: expected yearly average incl. margin
+  marginCents: number | null; // spot only
   monthlyFee: number;
   termMonths: number | null;
   note?: string;
+  sourceUrl: string;
+  checkedAt: string;
 };
 
-export const OFFERS_UPDATED = "2026-09-30";
-export const SPOT_EXPECTED_AVG_CENTS = 7.5; // demo assumption for the year ahead, incl. VAT
-
-export const ELECTRICITY_OFFERS: ElectricityOffer[] = [
-  { id: "pohjoisvirta-12", supplier: "Pohjoisvirta", product: "Vakaa 12 kk", pricing: "fixed", centsPerKwh: 10.49, monthlyFee: 4.49, termMonths: 12 },
-  { id: "tuulisahko-24", supplier: "Tuulisähkö", product: "Tuuli 24 kk", pricing: "fixed", centsPerKwh: 10.99, monthlyFee: 2.99, termMonths: 24, note: "100% wind power" },
-  { id: "kotivalo-spot", supplier: "Kotivalo", product: "Pörssi", pricing: "spot", centsPerKwh: SPOT_EXPECTED_AVG_CENTS + 0.59, monthlyFee: 3.99, termMonths: null, note: "Price changes every hour; cheaper on average, but winter spikes hit hard" },
-];
+export const OFFERS_UPDATED = SAVED_ELECTRICITY_DB.ranAt.slice(0, 10);
 
 export const annualCost = (kwh: number, centsPerKwh: number, monthlyFee: number) =>
   (kwh * centsPerKwh) / 100 + monthlyFee * 12;
@@ -37,17 +35,36 @@ export type Comparison = {
   doNothing: number; // yearly cost after the automatic rollover (or current if none)
   offers: (ElectricityOffer & { yearly: number; saving: number })[]; // saving vs doNothing, best first
   recommended: ElectricityOffer & { yearly: number; saving: number };
+  segment: Segment;
 };
 
-export function compare(t: ContractTerms): Comparison {
+export function compare(t: ContractTerms, db: MarketDb = SAVED_ELECTRICITY_DB): Comparison {
   const current = annualCost(t.annualKwh, t.centsPerKwh, t.monthlyFee);
   const doNothing =
     t.centsAfterEnd != null ? annualCost(t.annualKwh, t.centsAfterEnd, t.monthlyFeeAfterEnd ?? t.monthlyFee) : current;
-  const offers = ELECTRICITY_OFFERS.map((o) => {
-    const yearly = annualCost(t.annualKwh, o.centsPerKwh, o.monthlyFee);
-    return { ...o, yearly, saving: doNothing - yearly };
-  }).sort((a, b) => a.yearly - b.yearly);
+  const { segment, offers: shortlist } = shortlistFor(db, t.annualKwh);
+  const offers = shortlist
+    .map((o) => {
+      const yearly = offerYearly(o, t.annualKwh, db.spotExpectedAvgCents);
+      const spot = o.pricing === "spot";
+      return {
+        id: o.id,
+        supplier: o.supplier,
+        product: o.product,
+        pricing: o.pricing,
+        centsPerKwh: spot ? db.spotExpectedAvgCents + o.centsPerKwh : o.centsPerKwh,
+        marginCents: spot ? o.centsPerKwh : null,
+        monthlyFee: o.monthlyFee,
+        termMonths: o.termMonths,
+        note: o.conditions ?? (spot ? "Price changes every hour; cheaper on average, but winter spikes hit hard" : undefined),
+        sourceUrl: o.sourceUrl,
+        checkedAt: o.checkedAt,
+        yearly,
+        saving: doNothing - yearly,
+      };
+    })
+    .sort((a, b) => a.yearly - b.yearly);
   // The coach recommends the cheapest fixed price: predictable is better for a budget.
   const recommended = offers.find((o) => o.pricing === "fixed") ?? offers[0];
-  return { current, doNothing, offers, recommended };
+  return { current, doNothing, offers, recommended, segment };
 }
