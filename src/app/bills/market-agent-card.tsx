@@ -63,12 +63,12 @@ export function MarketAgentCard<D extends AgentDb>(props: { db: D; forYou: React
           if (e.type === "step") setSteps((prev) => (prev ? { ...prev, [e.step]: { status: e.status, detail: e.detail } } : prev));
           else {
             if (e.live) props.onResult(e.db as D);
-            else setNote(`Showing the saved run from ${timeFmt.format(new Date(e.db.ranAt))}.`);
+            else setNote(`Showing the saved run from ${timeFmt.format(new Date(e.db.ranAt))}.${e.error ? ` (${e.error.slice(0, 120)})` : ""}`);
           }
         }
       }
-    } catch {
-      setNote("Couldn't reach the agent. Showing the saved run.");
+    } catch (err) {
+      setNote(`Couldn't reach the agent (${String(err).slice(0, 80)}). Showing the saved run.`);
     } finally {
       setRunning(false);
     }
