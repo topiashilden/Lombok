@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { AlarmClock, Bell, Check, Phone } from "lucide-react";
-import { IconTile, eur, primaryButton, secondaryButton } from "@/components/solvo/ui";
+import { IconTile, eur, primaryButton } from "@/components/solvo/ui";
 import { ESCALATION, UNPAID } from "@/data/reminders";
 import { useBillActions } from "@/lib/switches";
 
@@ -70,11 +70,11 @@ export function OverdueBillCard({ asOf }: { asOf: string }) {
 
       <Link href="/call" transitionTypes={["nav-forward"]} className={`${primaryButton} mt-4`}>
         <Phone className="size-[18px]" aria-hidden />
-        Solvo is calling
+        Play the demo call
       </Link>
-      <Link href="/call?skip=1" transitionTypes={["nav-forward"]} className={`${secondaryButton} mt-2`}>
-        Pay now instead
-      </Link>
+      <p className="mt-2 px-1 text-center text-[12px] leading-snug text-muted-foreground">
+        Demo only. In the real service Solvo would simply ring your phone.
+      </p>
     </section>
   );
 }

@@ -39,11 +39,7 @@ export function CallClient() {
     if (timer.current) clearInterval(timer.current);
   }
 
-  // "Pay now" on Home skips the call: /call?skip=1
-  useEffect(() => {
-    if (new URLSearchParams(window.location.search).get("skip")) setTimeout(() => setStage("after"), 0);
-    return () => stopAll();
-  }, []);
+  useEffect(() => () => stopAll(), []);
 
   function hangUp() {
     stopAll();
@@ -89,6 +85,9 @@ export function CallClient() {
     return (
       <main className="flex min-h-dvh flex-col items-center justify-between bg-slab px-6 pt-[calc(4rem+env(safe-area-inset-top))] pb-[calc(3rem+env(safe-area-inset-bottom))] text-white">
         <div className="flex flex-col items-center gap-3 text-center">
+          <p className="mb-4 rounded-full bg-mint px-3 py-1 text-[12px] font-semibold text-slab">
+            Demo call. In real use your phone would ring.
+          </p>
           <div className={`flex size-24 items-center justify-center rounded-full bg-white ${stage === "ringing" ? "animate-pulse" : ""}`}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/solvo-logo.png" alt="" className="w-16" />

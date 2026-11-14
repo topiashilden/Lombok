@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
 import { MoneyBadge, SignedAmount } from "@/components/solvo/money-badge";
 import { Chip, Group, eur } from "@/components/solvo/ui";
@@ -98,14 +97,6 @@ export function BillHistory({ bills, asOf }: { bills: PaidBill[]; asOf: string }
                   {r.badge && !r.open && <Chip tone="green">{r.badge}</Chip>}
                 </div>
                 <div className="mt-0.5 text-[13px] leading-snug text-muted-foreground">{r.subtitle}</div>
-                {r.open && (
-                  <Link
-                    href="/call?skip=1"
-                    className="mt-1 inline-flex min-h-11 items-center text-[13px] font-semibold text-primary underline underline-offset-4"
-                  >
-                    Pay now
-                  </Link>
-                )}
               </div>
               <SignedAmount kind="out" value={r.amount} className="text-[15px]" />
             </div>
