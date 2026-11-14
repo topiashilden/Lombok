@@ -328,7 +328,7 @@
     var(--vt-move) var(--vt-ease) both vt-slide;
 }
 
-/* The tab bar stays put, and its active pill glides to the new tab. */
+/* The tab bar stays put during page transitions. */
 #tabbar {
   view-transition-name: tabbar;
 }
@@ -342,10 +342,14 @@
 ::view-transition-new(tabbar) {
   animation: none;
 }
-::view-transition-group(.tab-pill) {
-  animation-duration: var(--vt-move);
-  animation-timing-function: var(--vt-ease);
-  z-index: 60;
+@keyframes tab-pill {
+  from {
+    opacity: 0;
+    transform: scale(0.5, 0.7);
+  }
+}
+@utility animate-tab-pill {
+  animation: tab-pill 260ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 
 @media (prefers-reduced-motion: reduce) {

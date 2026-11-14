@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ViewTransition } from "react";
 import {
   House,
   MessageCircle,
@@ -47,7 +46,7 @@ export function TabBar() {
                 href={href}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "flex h-full flex-col items-center justify-center gap-0.5 text-[11px] font-medium transition-colors",
+                  "flex h-full flex-col items-center justify-center gap-0.5 text-[11px] font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-inset",
                   active ? "text-primary" : "text-muted-foreground",
                 )}
               >
@@ -64,12 +63,8 @@ export function TabBar() {
                   </span>
                 ) : (
                   <span className="relative flex h-7 w-14 items-center justify-center">
-                    {/* The active pill glides from tab to tab (view transition, see globals.css). */}
-                    {active && (
-                      <ViewTransition name="tab-pill" share="tab-pill">
-                        <span className="absolute inset-0 rounded-full bg-accent" aria-hidden />
-                      </ViewTransition>
-                    )}
+                    {/* The active tab's pill grows in under the icon. Plain CSS, so the icon is never covered. */}
+                    {active && <span className="animate-tab-pill absolute inset-0 rounded-full bg-accent" aria-hidden />}
                     <Icon
                       className="relative size-[22px]"
                       strokeWidth={active ? 2.25 : 1.75}
