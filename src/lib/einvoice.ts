@@ -20,6 +20,10 @@ export type Reading = {
   contractEndDate: string | null;
   priceAfterEndCentsPerKwh: number | null;
   monthlyFeeAfterEnd: number | null;
+  // telecom
+  mobileLines: number | null; // number of mobile subscriptions on the invoice
+  pricePerLine: number | null; // EUR per month per mobile line
+  homeInternetMonthly: number | null; // EUR per month for fixed or home broadband
   // all kinds
   monthlyCost: number; // EUR, what this costs per month today
   switchable: boolean; // can the customer change supplier?
@@ -47,6 +51,9 @@ export const READING_SCHEMA = {
     contractEndDate: str,
     priceAfterEndCentsPerKwh: num,
     monthlyFeeAfterEnd: num,
+    mobileLines: num,
+    pricePerLine: num,
+    homeInternetMonthly: num,
     monthlyCost: { type: "NUMBER" },
     switchable: { type: "BOOLEAN" },
     summary: { type: "STRING" },
@@ -54,12 +61,14 @@ export const READING_SCHEMA = {
   required: [
     "kind", "supplier", "product", "total", "dueDate", "periodStart", "periodEnd", "consumptionKwh",
     "annualConsumptionKwh", "priceCentsPerKwh", "monthlyFee", "contractType", "contractEndDate",
-    "priceAfterEndCentsPerKwh", "monthlyFeeAfterEnd", "monthlyCost", "switchable", "summary",
+    "priceAfterEndCentsPerKwh", "monthlyFeeAfterEnd", "mobileLines", "pricePerLine", "homeInternetMonthly",
+    "monthlyCost", "switchable", "summary",
   ],
   propertyOrdering: [
     "kind", "supplier", "product", "total", "dueDate", "periodStart", "periodEnd", "consumptionKwh",
     "annualConsumptionKwh", "priceCentsPerKwh", "monthlyFee", "contractType", "contractEndDate",
-    "priceAfterEndCentsPerKwh", "monthlyFeeAfterEnd", "monthlyCost", "switchable", "summary",
+    "priceAfterEndCentsPerKwh", "monthlyFeeAfterEnd", "mobileLines", "pricePerLine", "homeInternetMonthly",
+    "monthlyCost", "switchable", "summary",
   ],
 };
 
@@ -71,6 +80,7 @@ Extract the fields of the schema from the XML below. Rules:
 - monthlyFee: the monthly base fee (perusmaksu) in EUR.
 - contractType fixed_term if the contract has an end date (määräaikainen), open_ended if valid until further notice (toistaiseksi voimassa), spot if exchange-price.
 - priceAfterEndCentsPerKwh and monthlyFeeAfterEnd: what the contract automatically changes to after it ends, if the invoice says so.
+- mobileLines, pricePerLine, homeInternetMonthly: for telecom, the number of mobile subscriptions, the monthly price of one line, and the monthly price of home or fibre broadband. Null for other kinds.
 - monthlyCost: what this service costs per month today; for a monthly invoice use the invoice total.
 - switchable: false for electricity transmission (the local grid is a regulated monopoly), true for electricity energy and telecom.
 - summary: one short, friendly English sentence telling the customer what this bill is and anything they should act on (for example a contract ending soon).

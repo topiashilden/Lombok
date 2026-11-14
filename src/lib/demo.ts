@@ -1,3 +1,6 @@
+// Server only: the demo JSON holds every transaction (~190 KB per customer). Importing this file
+// from a client component fails the build, so the data never reaches the phone. Pass props instead.
+import "server-only";
 import cust01787 from "@/data/demo/CUST01787.json";
 import cust01590 from "@/data/demo/CUST01590.json";
 

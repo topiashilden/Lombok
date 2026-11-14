@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { LiveWeeklyEuro, ResetDemoButton, SwitchBoostNote } from "@/components/live-budget";
 import { safeToSpend, topCategories, unknownBills } from "@/lib/coach";
 import { BASKET_LABELS, type Basket } from "@/lib/demo";
 import { getSource } from "@/lib/source";
@@ -18,7 +19,7 @@ export default function Home() {
   const usedShare = Math.min(1, Math.max(0, s.spentThisWeek / s.weeklyBudget));
 
   return (
-    <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-4 px-4 py-6">
+    <main className="flex flex-1 flex-col gap-4 px-4 pt-[calc(1.5rem+env(safe-area-inset-top))] pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
       {local && (
         <p className="rounded-md bg-red-950 px-3 py-2 text-center text-xs font-medium text-red-50">
           My Nordea data, local only. Do not share or record this screen.
@@ -46,7 +47,7 @@ export default function Home() {
         <CardHeader>
           <CardDescription className="text-emerald-200">Safe to spend this week</CardDescription>
           <CardTitle className={`text-5xl font-semibold tracking-tight ${over ? "text-red-300" : ""}`}>
-            {over ? `−${eur.format(-s.remaining)}` : eur.format(s.remaining)}
+            <LiveWeeklyEuro base={s.remaining} signed />
           </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
@@ -57,11 +58,34 @@ export default function Home() {
             />
           </div>
           <p className="text-sm text-emerald-200">
-            {eur.format(s.spentThisWeek)} spent since {fmtDate(s.weekStart)} of your {eur.format(s.weeklyBudget)} weekly
+            {eur.format(s.spentThisWeek)} spent since {fmtDate(s.weekStart)} of your <LiveWeeklyEuro base={s.weeklyBudget} /> weekly
             budget · {s.daysLeft} {s.daysLeft === 1 ? "day" : "days"} left
           </p>
+          <SwitchBoostNote className="text-sm font-medium text-emerald-300" />
         </CardContent>
       </Card>
+
+      {/* Coach chat entry */}
+      <div className="flex flex-col gap-2">
+        <Link
+          href="/coach"
+          className="flex h-11 items-center justify-between rounded-xl border bg-card px-3 text-sm text-muted-foreground hover:bg-muted"
+        >
+          <span>Ask Solvo about your money…</span>
+          <span className="font-medium text-emerald-800">Ask</span>
+        </Link>
+        <div className="flex flex-wrap gap-1.5">
+          {["How much did I spend on taxis?", "Can I afford an €80 dinner this week?"].map((q) => (
+            <Link
+              key={q}
+              href={`/coach?q=${encodeURIComponent(q)}`}
+              className="rounded-full border px-2.5 py-1 text-xs text-muted-foreground hover:bg-muted"
+            >
+              {q}
+            </Link>
+          ))}
+        </div>
+      </div>
 
       {/* How the number is built */}
       <Card size="sm">
@@ -143,7 +167,8 @@ export default function Home() {
       })}
 
       <footer className="mt-2 text-xs text-muted-foreground">
-        Demo with S-Pankki&apos;s synthetic Junction 2026 dataset, customer {c.id}. The savings goal is an assumption.
+        Demo with S-Pankki&apos;s synthetic Junction 2026 dataset, customer {c.id}. The savings goal is an assumption.{" "}
+        <ResetDemoButton className="underline underline-offset-4" />
       </footer>
     </main>
   );
