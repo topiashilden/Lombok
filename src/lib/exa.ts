@@ -10,6 +10,9 @@ type ExaResponse = {
   output?: { content?: Record<string, unknown> | string; grounding?: Grounding[] };
 };
 
+/** The Exa key. EXA_KEY is accepted too, since that's the name it was first given in Vercel. */
+export const exaKey = () => process.env.EXA_API_KEY || process.env.EXA_KEY;
+
 export async function exaStructured<T>(opts: {
   query: string;
   objective: string;
@@ -18,7 +21,7 @@ export async function exaStructured<T>(opts: {
   arrayKey: string; // the array in the schema that holds the items
   priceFields: string[]; // fields whose low-confidence citation drops the item
 }): Promise<{ results: { url: string; title: string }[]; items: (T & { lowConfidence: boolean })[] }> {
-  const key = process.env.EXA_API_KEY;
+  const key = exaKey();
   if (!key) throw new Error("EXA_API_KEY not set");
   const res = await fetch("https://api.exa.ai/search", {
     method: "POST",

@@ -8,7 +8,7 @@ const BASE = `http://127.0.0.1:${PORT}`;
 
 const server = spawn(process.execPath, ["node_modules/next/dist/bin/next", "start", "-p", PORT, "-H", "127.0.0.1"], {
   stdio: ["ignore", "pipe", "pipe"],
-  env: { ...process.env, GEMINI_API_KEY: "", EXA_API_KEY: "" },
+  env: { ...process.env, GEMINI_API_KEY: "", EXA_API_KEY: "", EXA_KEY: "" },
 });
 let serverLog = "";
 server.stdout.on("data", (d) => (serverLog += d));

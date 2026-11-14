@@ -1,5 +1,5 @@
 import "server-only";
-import { exaStructured, uniqueSources } from "./exa";
+import { exaKey, exaStructured, uniqueSources } from "./exa";
 import type { AgentEvent } from "./market-agent-events";
 import { SAVED_TELECOM_DB, buildTelecomSegments, slug, type TelecomDb, type TelecomPlan } from "./market";
 
@@ -59,7 +59,7 @@ export async function* runTelecomAgent(): AsyncGenerator<AgentEvent> {
   const fallback = (error: string): AgentEvent => ({ type: "result", db: saved, live: false, error });
 
   yield { type: "step", step: "search", status: "running", detail: "Searching Finnish mobile and broadband prices with Exa" };
-  if (!process.env.EXA_API_KEY) {
+  if (!exaKey()) {
     yield { type: "step", step: "search", status: "failed", detail: "Live search is off, using the last saved run" };
     yield fallback("EXA_API_KEY not set");
     return;
