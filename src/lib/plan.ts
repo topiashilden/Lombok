@@ -26,7 +26,7 @@ export type PlanBase = {
   status: "worker" | "part-time" | "student" | "student-working" | "between-jobs" | "retired";
 };
 
-export type GoalKind = "asp" | "trip" | "other";
+export type GoalKind = "property" | "trip" | "other";
 
 export type Goal = {
   id: string;

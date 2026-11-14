@@ -29,7 +29,7 @@ const LEARN = [
 const ASP_LINK = { title: "How to get your own home", href: "https://www.taloustaito.fi/nuoret-ja-raha/nain-voit-paasta-kiinni-omaan-asuntoon/" };
 
 const GOAL_PRESETS: Record<GoalKind, { label: string; target: number; months: number }> = {
-  asp: { label: "Home savings (ASP)", target: 20000, months: 36 },
+  property: { label: "Home or property", target: 20000, months: 36 },
   trip: { label: "A trip", target: 800, months: 12 },
   other: { label: "Something else", target: 500, months: 12 },
 };
@@ -347,10 +347,10 @@ export function OnboardingClient({ profile, base, schedule, local }: { profile: 
           <PageTitle title="Saving for something?">Add what you are saving for. Solvo works out how much to move each month.</PageTitle>
           <Group>
             <div className="flex flex-wrap gap-2 p-4">
-              {(["asp", "trip", "other"] as GoalKind[]).map((k) => (
+              {(["property", "trip", "other"] as GoalKind[]).map((k) => (
                 <button key={k} type="button" onClick={() => addGoal(k)} className="flex h-11 items-center gap-1.5 rounded-xl bg-muted px-3 text-[15px] font-semibold active:scale-[0.98]">
                   <Plus className="size-4" aria-hidden />
-                  {k === "asp" ? "Home (ASP)" : k === "trip" ? "A trip" : "Something else"}
+                  {k === "property" ? "Home or property" : k === "trip" ? "A trip" : "Something else"}
                 </button>
               ))}
             </div>
@@ -363,7 +363,7 @@ export function OnboardingClient({ profile, base, schedule, local }: { profile: 
                 key={g.id}
                 title={
                   <span className="flex items-center gap-2">
-                    {g.kind === "asp" ? <Home className="size-4" aria-hidden /> : g.kind === "trip" ? <Plane className="size-4" aria-hidden /> : <PiggyBank className="size-4" aria-hidden />}
+                    {g.kind === "property" ? <Home className="size-4" aria-hidden /> : g.kind === "trip" ? <Plane className="size-4" aria-hidden /> : <PiggyBank className="size-4" aria-hidden />}
                     {g.label}
                   </span>
                 }
@@ -373,9 +373,9 @@ export function OnboardingClient({ profile, base, schedule, local }: { profile: 
                   </button>
                 }
                 footer={
-                  g.kind === "asp" ? (
+                  g.kind === "property" ? (
                     <>
-                      ASP rules changed in June 2026. Banks have typically wanted about 10% of the price saved. Check current terms with your bank.{" "}
+                      A home or a cabin usually needs a down payment from your own savings, and your bank sets how much. Buying a first home? Look at ASP: its rules changed in June 2026.{" "}
                       <a href={ASP_LINK.href} target="_blank" rel="noopener noreferrer" className="underline underline-offset-4">
                         {ASP_LINK.title}
                       </a>
