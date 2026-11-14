@@ -13,6 +13,9 @@ export type Item = {
   detail?: string;
 };
 
+/** A bill whose supplier is known, for example from an e-invoice. Used in place of the bank's unnamed utility payments. */
+export type NamedBill = { label: string; supplier: string; day: number; amount: number };
+
 export type Schedule = {
   payday: { day: number; amount: number } | null;
   items: Item[]; // income and recurring bills, payday first
@@ -36,9 +39,19 @@ export function ordinal(n: number) {
   return `${n}th`;
 }
 
+/** What kind of bill a company name suggests, so the calendar can say "Electricity bill" instead of a company name alone. */
+export function billType(name: string): string | null {
+  if (/sähköverkko|verkko|siirto|grid|elenia/i.test(name)) return "Grid fee";
+  if (/energia|energy|helen|fortum|vattenfall|sähkö/i.test(name)) return "Electricity bill";
+  if (/elisa|\bdna\b|telia|sonera|saunalahti|kaista|telecom|puhelin/i.test(name)) return "Phone and internet";
+  if (/vakuutus|insurance|\bif\b|tapiola|fennia|pohjola|turva/i.test(name)) return "Insurance";
+  if (/vesi|water/i.test(name)) return "Water bill";
+  return null;
+}
+
 const isGrant = (type: string, merchant: string | null) => /opintotuki/i.test(type) || /kansaneläke|\bkela\b/i.test(merchant ?? "");
 
-export function inferSchedule(c: DemoCustomer): Schedule {
+export function inferSchedule(c: DemoCustomer, named: NamedBill[] = []): Schedule {
   const window = new Set(c.summary.last12Months);
   const rows = c.transactions.filter((t) => window.has(monthOf(t.date)));
   const items: Item[] = [];
@@ -83,14 +96,26 @@ export function inferSchedule(c: DemoCustomer): Schedule {
   // Utility bills. With merchant names (real bank data) each company is its own item. Without them (the synthetic
   // bank data) bills are grouped by their order in the month: first bill, second bill, and so on.
   const utilities = rows.filter((t) => t.category === "Utilities" && t.amount < 0);
-  const named = utilities.filter((t) => t.merchant);
-  if (named.length >= utilities.length / 2 && named.length) {
+  const withMerchant = utilities.filter((t) => t.merchant);
+  if (named.length) {
+    // The e-invoices say what each bill is, so use them: a name, the company, the usual day and the amount.
+    named.forEach((b, i) => items.push({ id: `bill-${i}`, label: b.label, kind: "out", day: b.day, amount: b.amount, source: "detected", detail: b.supplier }));
+  } else if (withMerchant.length >= utilities.length / 2 && withMerchant.length) {
     const byMerchant: Record<string, typeof rows> = {};
-    for (const t of named) (byMerchant[t.merchant as string] ??= []).push(t);
+    for (const t of withMerchant) (byMerchant[t.merchant as string] ??= []).push(t);
     Object.entries(byMerchant)
       .filter(([, rs]) => new Set(rs.map((t) => monthOf(t.date))).size >= 4)
       .forEach(([m, rs], i) => {
-        items.push({ id: `util-${i}`, label: m, kind: "out", day: Math.round(median(rs.map((t) => dayOf(t.date)))), amount: Math.round(median(rs.map((t) => -t.amount))), source: "detected" });
+        const type = billType(m);
+        items.push({
+          id: `util-${i}`,
+          label: type ?? m,
+          kind: "out",
+          day: Math.round(median(rs.map((t) => dayOf(t.date)))),
+          amount: Math.round(median(rs.map((t) => -t.amount))),
+          source: "detected",
+          detail: type ? m : undefined,
+        });
       });
   } else if (utilities.length) {
     const byMonth: Record<string, number[]> = {};
@@ -115,6 +140,15 @@ export function inferSchedule(c: DemoCustomer): Schedule {
       });
     }
   }
+
+  // Insurance is not a utility in the bank's categories, but a payee that is clearly an insurer and recurs is a fixed bill.
+  const insurers: Record<string, typeof rows> = {};
+  for (const t of rows) if (t.amount < 0 && t.merchant && billType(t.merchant) === "Insurance") (insurers[t.merchant] ??= []).push(t);
+  Object.entries(insurers)
+    .filter(([, rs]) => new Set(rs.map((t) => monthOf(t.date))).size >= 3)
+    .forEach(([m, rs], i) =>
+      items.push({ id: `ins-${i}`, label: "Insurance", kind: "out", day: Math.round(median(rs.map((t) => dayOf(t.date)))), amount: Math.round(median(rs.map((t) => -t.amount))), source: "detected", detail: m }),
+    );
 
   items.sort((a, b) => (a.kind === b.kind ? a.day - b.day : a.kind === "in" ? -1 : 1));
   return { payday, items };

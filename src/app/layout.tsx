@@ -1,8 +1,14 @@
+import type { ReactNode } from "react";
+import { Suspense } from "react";
 import type { Metadata, Viewport } from "next";
+import { connection } from "next/server";
 import { Bricolage_Grotesque, Geist_Mono, Instrument_Sans } from "next/font/google";
 import "./globals.css";
+import { ClockConfig } from "@/components/clock-config";
 import { PullToRefresh } from "@/components/pull-to-refresh";
 import { TabBar } from "@/components/tab-bar";
+import { DATASET_END, configureDemoClock } from "@/lib/demo-clock";
+import { getSource } from "@/lib/source";
 
 // Display: Bricolage Grotesque for the big money figures and page titles. Body: Instrument Sans.
 const display = Bricolage_Grotesque({
@@ -41,6 +47,20 @@ export const viewport: Viewport = {
   interactiveWidget: "resizes-content",
 };
 
+// Reads the real date per request (never frozen at deploy time) and turns the demo clock on, so every screen shows today's real
+// date. Real bank data (local Nordea mode) is already in real time, so the shift is off there. See src/lib/demo-clock.ts.
+async function DemoClock({ children }: { children: ReactNode }) {
+  await connection();
+  const end = getSource().local ? null : DATASET_END;
+  configureDemoClock(end);
+  return (
+    <>
+      <ClockConfig end={end} />
+      {children}
+    </>
+  );
+}
+
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
@@ -50,7 +70,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-dvh">
         {/* Phone-width column. On a laptop it sits centred so judges still see the phone layout. */}
         <div className="mx-auto flex min-h-dvh w-full max-w-[430px] flex-col bg-background md:shadow-2xl md:shadow-black/10">
-          {children}
+          <Suspense fallback={null}>
+            <DemoClock>{children}</DemoClock>
+          </Suspense>
           <TabBar />
           <PullToRefresh />
         </div>

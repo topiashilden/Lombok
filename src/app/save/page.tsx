@@ -1,3 +1,4 @@
+import { connection } from "next/server";
 import { Screen } from "@/components/solvo/screen";
 import { DEFAULT_SAVINGS_GOAL_PER_MONTH, safeToSpend } from "@/lib/coach";
 import { MAIN_CUSTOMER } from "@/lib/demo";
@@ -5,7 +6,9 @@ import { SaveClient } from "./save-client";
 
 export const metadata = { title: "Invest · Solvo" };
 
-export default function SavePage() {
+export default async function SavePage() {
+  // Render per request: these pages show dates, and the demo clock reads the real date. See src/lib/demo-clock.ts.
+  await connection();
   const c = MAIN_CUSTOMER;
   const last = c.transactions[c.transactions.length - 1];
   // Fund deposits and withdrawals in the data (Aino has none: she doesn't invest yet).

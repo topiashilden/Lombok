@@ -1,3 +1,4 @@
+import { connection } from "next/server";
 import { Screen } from "@/components/solvo/screen";
 import { INVOICES } from "@/data/einvoices/CUST01787";
 import { SAVED_READINGS } from "@/data/einvoices/saved-readings";
@@ -8,7 +9,9 @@ import { BillsClient } from "./bills-client";
 
 export const metadata = { title: "Your bills · Solvo" };
 
-export default function BillsPage() {
+export default async function BillsPage() {
+  // Render per request: these pages show dates, and the demo clock reads the real date. See src/lib/demo-clock.ts.
+  await connection();
   const s = safeToSpend(MAIN_CUSTOMER);
   // Rent and utility payments in the last 12 months. A payment that matches an e-invoice Solvo has read gets the
   // supplier's name; the others have none, because utility payments in the data carry no merchant.

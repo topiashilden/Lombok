@@ -6,16 +6,18 @@ import { Group, Row } from "@/components/solvo/ui";
 import { MoneyBadge, SignedAmount } from "@/components/solvo/money-badge";
 import { useCustomEvents } from "@/lib/calendar-store";
 import { useOnboarding } from "@/lib/onboarding-store";
+import { plainFormat } from "@/lib/demo-clock";
 import { upcomingEvents, type Item } from "@/lib/schedule";
 
-const dayLabel = new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
+// Real calendar dates: formatted without the demo shift.
+const dayLabel = plainFormat({ weekday: "short", day: "numeric", month: "short" });
 
 /** On Home, always: the next money in and out, with a way into the full calendar. Not part of onboarding. */
-export function UpcomingCard({ items, asOf }: { items: Item[]; asOf: string }) {
+export function UpcomingCard({ items, today }: { items: Item[]; today: string }) {
   // The dates the person confirmed in onboarding win over the guesses; their own added dates are always included.
   const confirmed = useOnboarding().items;
   const custom = useCustomEvents();
-  const events = upcomingEvents(confirmed ?? items, custom, asOf, 21, 4);
+  const events = upcomingEvents(confirmed ?? items, custom, today, 21, 4);
 
   return (
     <Group
@@ -34,7 +36,7 @@ export function UpcomingCard({ items, asOf }: { items: Item[]; asOf: string }) {
             key={e.id + e.date}
             icon={<MoneyBadge kind={e.kind} />}
             title={e.label}
-            subtitle={e.date === asOf ? "Today" : dayLabel.format(new Date(`${e.date}T00:00:00Z`))}
+            subtitle={e.date === today ? "Today" : dayLabel(e.date)}
             value={<SignedAmount kind={e.kind} value={e.amount} />}
           />
         ))

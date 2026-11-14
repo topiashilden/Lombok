@@ -8,16 +8,23 @@ import { MoneyBadge, SignedAmount } from "@/components/solvo/money-badge";
 import { Sheet } from "@/components/solvo/sheet";
 import { BackLink, Group, PAGE, PageTitle, Row, TopBar, eur } from "@/components/solvo/ui";
 import { addCustomEvent, removeCustomEvent, useCustomEvents } from "@/lib/calendar-store";
+import { plainFormat, shiftIso } from "@/lib/demo-clock";
 import { useOnboarding } from "@/lib/onboarding-store";
 import { daysIn, eventsForMonth, isoDay, ordinal, type CustomEvent, type DayEvent, type Item } from "@/lib/schedule";
 
 const WEEKDAYS = ["M", "T", "W", "T", "F", "S", "S"];
-const monthName = new Intl.DateTimeFormat("en-GB", { month: "long", year: "numeric", timeZone: "UTC" });
-const dayName = new Intl.DateTimeFormat("en-GB", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" });
-const shortDay = new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
+// These show REAL calendar dates, so they must not go through the demo clock's shift (see src/lib/demo-clock.ts).
+const real = (o: Intl.DateTimeFormatOptions) => {
+  const f = plainFormat(o);
+  return { format: (d: Date) => f(d.toISOString().slice(0, 10)) };
+};
+const monthName = real({ month: "long", year: "numeric" });
+const dayName = real({ weekday: "long", day: "numeric", month: "long" });
+const shortDay = real({ weekday: "short", day: "numeric", month: "short" });
 const parse = (iso: string) => new Date(`${iso}T00:00:00Z`);
 
-export function CalendarClient({ items: detected, asOf }: { items: Item[]; asOf: string }) {
+// `today` is the real date. `offset` is how many days the demo data lags behind it, to find what happened on a past day.
+export function CalendarClient({ items: detected, today: asOf, offset }: { items: Item[]; today: string; offset: number }) {
   // Items the person confirmed in onboarding win over the guesses.
   const confirmed = useOnboarding().items;
   const items = confirmed ?? detected;
@@ -124,13 +131,13 @@ export function CalendarClient({ items: detected, asOf }: { items: Item[]; asOf:
         )}
       </Group>
 
-      {openDay && <DaySheet key={openDay} date={openDay} asOf={asOf} events={byDate.get(openDay) ?? []} custom={custom} onClose={() => setOpenDay(null)} />}
+      {openDay && <DaySheet key={openDay} date={openDay} asOf={asOf} offset={offset} events={byDate.get(openDay) ?? []} custom={custom} onClose={() => setOpenDay(null)} />}
     </main>
   );
 }
 
 /** One day: what is expected (money in and out), what really happened if the day has passed, and a way to add a date. */
-function DaySheet({ date, asOf, events, custom, onClose }: { date: string; asOf: string; events: DayEvent[]; custom: CustomEvent[]; onClose: () => void }) {
+function DaySheet({ date, asOf, offset, events, custom, onClose }: { date: string; asOf: string; offset: number; events: DayEvent[]; custom: CustomEvent[]; onClose: () => void }) {
   const [adding, setAdding] = useState(false);
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const past = date <= asOf;
@@ -139,14 +146,14 @@ function DaySheet({ date, asOf, events, custom, onClose }: { date: string; asOf:
   useEffect(() => {
     if (!past) return;
     const ac = new AbortController();
-    fetch(`/api/day?date=${date}`, { signal: ac.signal })
+    fetch(`/api/day?date=${shiftIso(date, -offset)}`, { signal: ac.signal })
       .then((r) => (r.ok ? (r.json() as Promise<DayResult>) : Promise.reject(new Error("bad response"))))
       .then(setActual)
       .catch(() => {
         if (!ac.signal.aborted) setActual("error");
       });
     return () => ac.abort();
-  }, [date, past]);
+  }, [date, past, offset]);
 
   if (adding) return <AddSheet date={date} onClose={() => setAdding(false)} />;
 
