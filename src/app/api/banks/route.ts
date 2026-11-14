@@ -1,7 +1,9 @@
+import { connection } from "next/server";
 import { explainLinked, sandboxBanks, sandboxEnabled } from "@/lib/linked-bank";
 
 // The bank picker's list, straight from Enable Banking (the demo uses its sandbox: test banks). 404 when the demo connection is not set up.
 export async function GET(req: Request) {
+  await connection(); // per request: never baked into the build, whatever the environment held at build time
   if (!sandboxEnabled()) return new Response("Not found", { status: 404 });
   try {
     const country = new URL(req.url).searchParams.get("country") ?? "FI";
