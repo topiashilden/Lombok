@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { Group, PageTitle, eur, eur2 } from "@/components/solvo/ui";
 import type { Reading } from "@/lib/einvoice";
-import { approveSwitch, useSwitches, weeklyBoost } from "@/lib/switches";
+import { approveSwitch, useSavingsPlan, useSwitches, weeklyBoost } from "@/lib/switches";
 import { compareTelecom, TELECOM_OFFERS_UPDATED, type TelecomTerms } from "@/lib/telecom-offers";
 import { ApproveSheet, DoneView, EditField, OfferOption, ReadFields, SavingSlab, StickyAction } from "./switch-ui";
 
@@ -35,12 +35,13 @@ export function TelecomDetail(props: {
   const chosen = cmp.offers.find((o) => o.id === chosenId) ?? cmp.recommended;
   const [stage, setStage] = useState<"compare" | "confirm" | "done">("compare");
   const switches = useSwitches();
+  const plan = useSavingsPlan();
   const startDate = startDateFrom(props.asOf);
   const perWeek = Math.max(0, chosen.saving) / 52;
   const isMatch = chosen.kind === "price_match";
 
   if (stage === "done") {
-    const boost = weeklyBoost(switches);
+    const boost = weeklyBoost(switches, plan);
     return (
       <DoneView
         title={isMatch ? "Price-match request sent" : "Switch requested"}

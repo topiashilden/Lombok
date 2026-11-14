@@ -2,8 +2,9 @@
 
 import { useSyncExternalStore } from "react";
 
-// Contract switches the user has approved in this browser. The demo has no backend, so they live in
-// localStorage: approve a switch in Bills and the safe-to-spend on Home goes up too. "Reset demo" clears them.
+// What the user has approved in this browser: contract switches and a monthly fund savings plan.
+// The demo has no backend, so both live in localStorage: approve a switch in Bills and the
+// safe-to-spend on Home goes up too. "Reset demo" clears everything.
 
 export type BillKey = "electricity" | "telecom";
 
@@ -19,67 +20,104 @@ export type SwitchRecord = {
 
 export type Switches = Partial<Record<BillKey, SwitchRecord>>;
 
-const KEY = "solvo.switches.v1";
-const EMPTY: Switches = {};
-const listeners = new Set<() => void>();
-let cacheRaw: string | null = null;
-let cache: Switches = EMPTY;
+export type SavingsPlan = {
+  monthly: number; // EUR moved to the fund each month
+  fundId: string;
+  fundName: string;
+  dayOfMonth: number;
+  approvedAt: string;
+};
 
-function readRaw() {
-  try {
-    return window.localStorage.getItem(KEY);
-  } catch {
-    return null;
-  }
-}
+function createStore<T extends object>(key: string, empty: T) {
+  const listeners = new Set<() => void>();
+  let cacheRaw: string | null = null;
+  let cache = empty;
 
-function snapshot(): Switches {
-  const raw = readRaw();
-  if (raw !== cacheRaw) {
-    cacheRaw = raw;
+  const snapshot = (): T => {
+    let raw: string | null = null;
     try {
-      cache = raw ? (JSON.parse(raw) as Switches) : EMPTY;
-    } catch {
-      cache = EMPTY;
+      raw = window.localStorage.getItem(key);
+    } catch {}
+    if (raw !== cacheRaw) {
+      cacheRaw = raw;
+      try {
+        cache = raw ? (JSON.parse(raw) as T) : empty;
+      } catch {
+        cache = empty;
+      }
     }
-  }
-  return cache;
-}
-
-function write(next: Switches) {
-  try {
-    window.localStorage.setItem(KEY, JSON.stringify(next));
-  } catch {
-    // Private mode etc.: the switch still shows on this page, it just won't persist.
-  }
-  listeners.forEach((l) => l());
-}
-
-function subscribe(listener: () => void) {
-  listeners.add(listener);
-  const onStorage = (e: StorageEvent) => e.key === KEY && listener();
-  window.addEventListener("storage", onStorage);
-  return () => {
-    listeners.delete(listener);
-    window.removeEventListener("storage", onStorage);
+    return cache;
   };
+
+  const set = (next: T | null) => {
+    try {
+      if (next) window.localStorage.setItem(key, JSON.stringify(next));
+      else window.localStorage.removeItem(key);
+    } catch {
+      // Private mode etc.: nothing persists, but the page keeps working.
+    }
+    listeners.forEach((l) => l());
+  };
+
+  const subscribe = (listener: () => void) => {
+    listeners.add(listener);
+    const onStorage = (e: StorageEvent) => e.key === key && listener();
+    window.addEventListener("storage", onStorage);
+    return () => {
+      listeners.delete(listener);
+      window.removeEventListener("storage", onStorage);
+    };
+  };
+
+  const use = () => useSyncExternalStore(subscribe, snapshot, () => empty);
+  return { snapshot, set, use };
 }
 
-export function useSwitches(): Switches {
-  return useSyncExternalStore(subscribe, snapshot, () => EMPTY);
+const NO_SWITCHES: Switches = {};
+const NO_PLAN = {} as Partial<SavingsPlan>;
+const switchStore = createStore<Switches>("solvo.switches.v1", NO_SWITCHES);
+// Unpaid bills the user has dealt with: paid, or asked to be reminded later.
+export type BillAction = { action: "paid" | "snoozed"; at: string };
+const NO_ACTIONS: Record<string, BillAction> = {};
+const billStore = createStore<Record<string, BillAction>>("solvo.bill-actions.v1", NO_ACTIONS);
+const planStore = createStore<Partial<SavingsPlan>>("solvo.savings-plan.v1", NO_PLAN);
+
+export const useSwitches = switchStore.use;
+
+export function useSavingsPlan(): SavingsPlan | null {
+  const p = planStore.use();
+  return p.monthly ? (p as SavingsPlan) : null;
+}
+
+export const useBillActions = billStore.use;
+
+export function setBillAction(billId: string, action: BillAction["action"]) {
+  billStore.set({ ...billStore.snapshot(), [billId]: { action, at: new Date().toISOString() } });
 }
 
 export function approveSwitch(rec: SwitchRecord) {
-  write({ ...snapshot(), [rec.bill]: rec });
+  switchStore.set({ ...switchStore.snapshot(), [rec.bill]: rec });
 }
 
-export function resetSwitches() {
-  write({});
+export function approveSavingsPlan(plan: SavingsPlan) {
+  planStore.set(plan);
+}
+
+export function resetDemo() {
+  switchStore.set(null);
+  planStore.set(null);
+  billStore.set(null);
 }
 
 export const WEEKS_PER_YEAR = 52;
 
-// How much more the user can spend each week thanks to approved switches.
-export function weeklyBoost(s: Switches) {
-  return Object.values(s).reduce((sum, r) => sum + Math.max(0, r?.yearlySaving ?? 0), 0) / WEEKS_PER_YEAR;
+/** Money freed by approved switches, per month. */
+export function monthlyFreed(s: Switches) {
+  return Object.values(s).reduce((sum, r) => sum + Math.max(0, r?.yearlySaving ?? 0), 0) / 12;
+}
+
+/** How much more the user can spend each week: freed money minus what goes to the fund. */
+export function weeklyBoost(s: Switches, plan: SavingsPlan | null = null) {
+  const toSpend = Math.max(0, monthlyFreed(s) - (plan?.monthly ?? 0));
+  return (toSpend * 12) / WEEKS_PER_YEAR;
 }

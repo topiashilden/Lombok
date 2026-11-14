@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, MessageCircle, ReceiptText } from "lucide-react";
 import { LiveWeeklyEuro, ResetDemoButton, SwitchBoostNote } from "@/components/live-budget";
+import { OverdueBillCard } from "@/components/overdue-bill";
 import { Chip, Group, IconTile, Logo, PAGE, Row, Slab, eur, primaryButton } from "@/components/solvo/ui";
 import { safeToSpend, topCategories, unknownBills } from "@/lib/coach";
 import { BASKET_LABELS, type Basket } from "@/lib/demo";
@@ -76,6 +77,8 @@ export default function Home() {
         </p>
         <SwitchBoostNote className="mt-2 text-[13px] font-semibold text-mint" />
       </Slab>
+
+      <OverdueBillCard asOf={c.asOf} />
 
       {/* The bank's blind spot, and Solvo's hook */}
       <section className="mt-4 rounded-[24px] bg-card p-5 shadow-[0_1px_3px_rgba(15,42,31,0.06)]">

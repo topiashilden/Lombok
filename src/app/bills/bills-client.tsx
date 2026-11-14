@@ -7,11 +7,12 @@ import { ApproveSheet, DoneView, EditField, OfferOption, ReadFields, SavingSlab,
 import type { Reading } from "@/lib/einvoice";
 import { compare, OFFERS_UPDATED, type ContractTerms } from "@/lib/offers";
 import { compareTelecom } from "@/lib/telecom-offers";
-import { approveSwitch, useSwitches, weeklyBoost, type BillKey, type SwitchRecord } from "@/lib/switches";
+import { approveSwitch, useSavingsPlan, useSwitches, weeklyBoost, type BillKey, type SwitchRecord } from "@/lib/switches";
+import { PhotoUpload } from "./photo-upload";
 import { TelecomDetail } from "./telecom-detail";
 
-type InvoiceMeta = { id: string; payment: { date: string; amount: number } };
-type Loaded = { reading: Reading; source: "gemini" | "saved"; model?: string; ms: number; cached?: boolean };
+type InvoiceMeta = { id: string; payment: { date: string; amount: number } | null }; // null = read from a photo
+type Loaded = { reading: Reading; source: "gemini" | "saved"; model?: string; ms: number; cached?: boolean; fromPhoto?: boolean };
 
 const dateFmt = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
 const fmtDate = (iso: string | null) => (iso ? dateFmt.format(new Date(`${iso}T00:00:00Z`)) : "–");
@@ -48,6 +49,7 @@ export function BillsClient(props: {
 }) {
   const [loaded, setLoaded] = useState<Record<string, Loaded>>({});
   const [open, setOpen] = useState<string | null>(null);
+  const [photos, setPhotos] = useState<InvoiceMeta[]>([]);
   const switches = useSwitches();
 
   useEffect(() => {
@@ -65,8 +67,9 @@ export function BillsClient(props: {
   }, [open]);
 
   const openInvoice = open ? loaded[open] : undefined;
-  const actionable = props.invoices.filter((inv) => isActionable(loaded[inv.id], switches));
-  const others = props.invoices.filter((inv) => !isActionable(loaded[inv.id], switches));
+  const all = [...props.invoices, ...photos];
+  const actionable = all.filter((inv) => isActionable(loaded[inv.id], switches));
+  const others = all.filter((inv) => !isActionable(loaded[inv.id], switches));
 
   return (
     <main className={PAGE}>
@@ -102,6 +105,14 @@ export function BillsClient(props: {
               <InvoiceRow key={inv.id} meta={inv} loaded={loaded[inv.id]} switched={switchedFor(loaded[inv.id], switches)} />
             ))}
           </Group>
+
+          <PhotoUpload
+            onRead={(d) => {
+              const id = `photo-${photos.length + 1}`;
+              setLoaded((prev) => ({ ...prev, [id]: { ...d, source: "gemini", fromPhoto: true } }));
+              setPhotos((prev) => [...prev, { id, payment: null }]);
+            }}
+          />
         </>
       )}
     </main>
@@ -129,7 +140,8 @@ function SourceBadge({ l }: { l: Loaded }) {
   return l.source === "gemini" ? (
     <Chip tone="green">
       <Sparkles className="size-3" aria-hidden />
-      Read by Gemini{l.cached || !l.ms ? "" : ` in ${(l.ms / 1000).toFixed(1)} s`}
+      {l.fromPhoto ? "Read from your photo" : "Read by Gemini"}
+      {l.cached || !l.ms ? "" : ` in ${(l.ms / 1000).toFixed(1)} s`}
     </Chip>
   ) : (
     <Chip>Saved reading, AI offline</Chip>
@@ -175,7 +187,9 @@ function FeaturedInvoice({ meta, loaded, onOpen }: { meta: InvoiceMeta; loaded: 
       <div className="mt-3 flex flex-wrap items-center gap-1.5">
         <SourceBadge l={loaded} />
         <Chip>
-          Paid {eur2.format(-meta.payment.amount)} on {fmtDate(meta.payment.date)}
+          {meta.payment
+            ? `Paid ${eur2.format(-meta.payment.amount)} on ${fmtDate(meta.payment.date)}`
+            : `From your photo, due ${fmtDate(r.dueDate)}`}
         </Chip>
       </div>
 
@@ -195,7 +209,7 @@ function InvoiceRow({ meta, loaded, switched }: { meta: InvoiceMeta; loaded?: Lo
         <div className="flex-1">
           <p className="text-[15px] font-medium text-muted-foreground">Reading e-invoice…</p>
           <p className="num mt-0.5 text-[13px] text-muted-foreground">
-            Payment {eur2.format(-meta.payment.amount)} on {fmtDate(meta.payment.date)}
+            {meta.payment ? `Payment ${eur2.format(-meta.payment.amount)} on ${fmtDate(meta.payment.date)}` : "Your photo"}
           </p>
           <div className="shimmer mt-2.5 h-2.5 w-3/4 rounded-full" />
         </div>
@@ -254,7 +268,7 @@ function ElectricityDetail(props: { loaded: Loaded; weeklyBudget: number; remain
   const chosen = cmp.offers.find((o) => o.id === chosenId) ?? cmp.recommended;
   const [stage, setStage] = useState<"compare" | "confirm" | "done">("compare");
   const perWeek = chosen.saving / 52;
-  const boost = weeklyBoost(useSwitches()); // all approved switches, including this one once approved
+  const boost = weeklyBoost(useSwitches(), useSavingsPlan()); // all approved switches, including this one once approved
   const startDate = r.contractEndDate ? nextDay(r.contractEndDate) : null;
 
   if (stage === "done") {

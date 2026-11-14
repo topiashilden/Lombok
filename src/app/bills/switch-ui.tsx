@@ -262,7 +262,10 @@ export function DoneView(props: {
         </div>
       )}
 
-      <Link href="/" className={`${secondaryButton} mt-6`}>
+      <Link href="/save" className={`${primaryButton} mt-6`}>
+        Save it in a fund instead
+      </Link>
+      <Link href="/" className={`${secondaryButton} mt-2`}>
         Back to home
       </Link>
     </div>
