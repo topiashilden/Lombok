@@ -13,6 +13,7 @@ import {
   PageTitle,
   TopBar,
   eur,
+  dec2,
   eur2,
   primaryButton,
 } from "@/components/solvo/ui";
@@ -405,7 +406,7 @@ function ElectricityDetail(props: { loaded: Loaded; weeklyBudget: number; remain
       <Group
         title="Your options for a year"
         aside={`${terms.annualKwh.toLocaleString("fi-FI")} kWh`}
-        footer={`Real public prices found by Solvo's market agent, energy only. Your current price would cost ${eur.format(cmp.current)} a year.`}
+        footer={`Real public prices found by Solvo's market agent, energy only. At your price today, before the contract rolls over, a year would cost ${eur.format(cmp.current)}.`}
       >
         <div role="radiogroup" aria-label="Electricity offers">
           {cmp.offers.map((o) => (
@@ -418,9 +419,9 @@ function ElectricityDetail(props: { loaded: Loaded; weeklyBudget: number; remain
               detail={
                 <>
                   {o.pricing === "spot"
-                    ? `Spot, about ${o.centsPerKwh.toFixed(2)} c/kWh (margin ${o.marginCents?.toFixed(2)})`
-                    : `${o.centsPerKwh.toFixed(2)} c/kWh`}
-                  {` + ${o.monthlyFee.toFixed(2)} €/mo`}
+                    ? `Spot, about ${dec2(o.centsPerKwh)} c/kWh (margin ${dec2(o.marginCents ?? 0)})`
+                    : `${dec2(o.centsPerKwh)} c/kWh`}
+                  {` + ${dec2(o.monthlyFee)} €/mo`}
                   {o.termMonths ? `, fixed ${o.termMonths} months` : ""}
                   {o.note ? `. ${o.note}` : ""}
                   <span className="mt-0.5 block">

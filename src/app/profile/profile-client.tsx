@@ -141,8 +141,8 @@ export function ProfileClient(props: {
                 ? `Switch approved, starts ${dateFmt.format(new Date(s.startDate))}`
                 : "Switch approved"
             }
-            value={`−${eur.format(s.yearlySaving)}`}
-            valueSub="a year"
+            value={`${eur.format(s.yearlySaving)}`}
+            valueSub="saved a year"
           />
         ))}
         {plan && (

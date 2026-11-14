@@ -5,7 +5,7 @@
 // the steps stream in live, and if anything fails the saved run stays in place.
 import { useState } from "react";
 import { Check, ChevronDown, Globe, Loader2, RefreshCw, X } from "lucide-react";
-import { Chip, secondaryButton } from "@/components/solvo/ui";
+import { Chip, dec2, secondaryButton } from "@/components/solvo/ui";
 import type { ReactNode } from "react";
 import { domainOf } from "@/lib/market";
 import type { AgentDb, AgentEvent, AgentStep } from "@/lib/market-agent-events";
@@ -42,8 +42,8 @@ function foundRows(db: AgentDb): FoundRow[] {
       group: o.pricing === "fixed" ? "Fixed price" : "Spot price",
       title: `${o.supplier} ${o.product}`,
       price:
-        (o.pricing === "fixed" ? `${o.centsPerKwh.toFixed(2)} c/kWh` : `Spot + ${o.centsPerKwh.toFixed(2)} c/kWh margin`) +
-        ` + ${o.monthlyFee.toFixed(2)} €/mo` +
+        (o.pricing === "fixed" ? `${dec2(o.centsPerKwh)} c/kWh` : `Spot + ${dec2(o.centsPerKwh)} c/kWh margin`) +
+        ` + ${dec2(o.monthlyFee)} €/mo` +
         (o.termMonths ? `, ${o.termMonths} months` : ""),
       conditions: o.conditions,
       sourceUrl: o.sourceUrl,
@@ -54,7 +54,7 @@ function foundRows(db: AgentDb): FoundRow[] {
     id: o.id,
     group: o.kind === "mobile" ? "Mobile plans" : "Home internet",
     title: `${o.operator} ${o.product}`,
-    price: `${o.monthlyPrice.toFixed(2)} €/mo, ${o.speedMbps} Mbit/s`,
+    price: `${dec2(o.monthlyPrice)} €/mo, ${o.speedMbps} Mbit/s`,
     conditions: o.conditions,
     sourceUrl: o.sourceUrl,
     checkedAt: o.checkedAt,
