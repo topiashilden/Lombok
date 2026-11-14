@@ -17,7 +17,7 @@ export default function Home() {
   const usedShare = Math.min(1, Math.max(0, s.spentThisWeek / s.weeklyBudget));
 
   return (
-    <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-4 px-4 py-6">
+    <main className="flex flex-1 flex-col gap-4 px-4 pt-[calc(1.5rem+env(safe-area-inset-top))] pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
       <header className="flex items-baseline justify-between">
         <div>
           {/* eslint-disable-next-line @next/next/no-img-element */}
