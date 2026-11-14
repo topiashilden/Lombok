@@ -1,14 +1,14 @@
 import { Screen } from "@/components/solvo/screen";
 import Link from "next/link";
 import { Suspense } from "react";
-import { ArrowRight, CalendarDays, MessageCircle, ReceiptText } from "lucide-react";
+import { CalendarDays, MessageCircle } from "lucide-react";
 import { LiveWeeklyEuro, ResetDemoButton, SwitchBoostNote } from "@/components/live-budget";
 import { OnboardingGate, PlanCard } from "@/components/onboarding-home";
 import { OverdueBillCard } from "@/components/overdue-bill";
 import { UpcomingCard } from "@/components/upcoming-card";
 import { LearnChip } from "@/components/learn/learn-chip";
-import { Chip, Group, IconTile, Logo, PAGE, Row, Slab, eur, primaryButton } from "@/components/solvo/ui";
-import { safeToSpend, topCategories, unknownBills } from "@/lib/coach";
+import { Chip, Group, IconTile, Logo, PAGE, Row, Slab, eur } from "@/components/solvo/ui";
+import { safeToSpend, topCategories } from "@/lib/coach";
 import { BASKET_LABELS, type Basket } from "@/lib/demo";
 import { inferSchedule } from "@/lib/schedule";
 import { getSource, pageMode } from "@/lib/source";
@@ -31,7 +31,6 @@ async function HomeScreen() {
   const { customer: c, local, mode } = getSource(await pageMode());
   const s = safeToSpend(c);
   const schedule = inferSchedule(c);
-  const bills = unknownBills(c);
   const baskets = [1, 2, 3] as Basket[];
   const yearTotal = baskets.reduce((sum, b) => sum + c.summary.basketYear[b], 0);
   const over = s.remaining < 0;
@@ -114,30 +113,6 @@ async function HomeScreen() {
         <PlanCard />
 
         <UpcomingCard items={schedule.items} asOf={c.asOf} />
-
-        {/* The bank's blind spot, and Solvo's hook */}
-        <section className="mt-4 rounded-[24px] bg-card p-5 shadow-[0_1px_3px_rgba(15,42,31,0.06)]">
-          <div className="flex items-start gap-3">
-            <IconTile tone="warn">
-              <ReceiptText />
-            </IconTile>
-            <div className="min-w-0 flex-1">
-              <p className="font-display text-[19px] leading-tight font-semibold tracking-[-0.01em]">
-                <span className="num">{eur.format(bills.perYear)}</span> a year goes to bills your bank can&apos;t name
-              </p>
-              <p className="mt-2 text-[14px] leading-snug text-muted-foreground">
-                {bills.withoutMerchant === 1
-                  ? `None of these ${Math.round(bills.paymentsPerMonth)} payments a month name the company or the contract.`
-                  : `${Math.round(bills.withoutMerchant * 100)}% of these ${Math.round(bills.paymentsPerMonth)} payments a month don't name the company or the contract.`} Solvo reads the e-invoices to find out what you pay for,
-                and whether you&apos;re overpaying.
-              </p>
-            </div>
-          </div>
-          <Link href="/bills" transitionTypes={["nav-forward"]} className={`${primaryButton} mt-4`}>
-            See what Solvo found
-            <ArrowRight className="size-[18px]" aria-hidden />
-          </Link>
-        </section>
 
         {/* Coach chat entry */}
         <section className="mt-4">
