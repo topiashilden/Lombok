@@ -76,9 +76,11 @@ try {
   });
   // The public app must show nothing of the live Nordea connection: every route is a 404 unless SOLVO_LIVE=1 (local only).
   await check("live Nordea routes are off by default", async () => {
+    // The connect page streams, so its status is already 200 when it decides to show "not found": check the content instead.
+    const connect = await (await fetch(BASE + "/connect/nordea")).text();
+    if (!connect.includes("could not be found") || connect.includes("Connecting Nordea")) throw new Error("/connect/nordea is not hidden");
     const tries = [
       fetch(BASE + "/callback?code=x&state=y", { redirect: "manual" }),
-      fetch(BASE + "/connect/nordea"),
       fetch(BASE + "/api/nordea/start", { method: "POST", headers: { Origin: BASE } }),
       fetch(BASE + "/api/nordea/sync", { method: "POST", headers: { Origin: BASE } }),
       fetch(BASE + "/api/nordea/disconnect", { method: "POST", headers: { Origin: BASE } }),
