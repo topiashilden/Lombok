@@ -3,6 +3,7 @@
 import { useSyncExternalStore } from "react";
 import { DEFAULT_SAVINGS_GOAL_PER_MONTH } from "@/lib/coach";
 import { WEEKS_PER_MONTH } from "@/lib/plan";
+import type { Item } from "@/lib/schedule";
 
 // The plan the person approved in onboarding. Like the switches, it lives in localStorage because the demo
 // has no backend. "Reset demo" clears it.
@@ -18,6 +19,12 @@ export type OnboardingState = {
   investMonthly?: number;
   investCeiling?: number;
   goals?: { label: string; monthly: number }[];
+  paydayDay?: number; // day of month the person confirmed
+  billsSafeMonthly?: number; // kept aside for fixed bills at payday
+  monthlyAdjust?: number; // EUR a month the person's income and bill corrections add to the home page's base numbers
+  irregularMonthly?: number; // kept aside for irregular costs
+  items?: Item[]; // income and bills as the person confirmed them; the calendar uses these
+  savedFunds?: string[]; // fund ids the person marked as interesting
 };
 
 const KEY = "solvo.onboarding.v1";
@@ -79,5 +86,5 @@ export const resetOnboarding = () => write(null);
 export function onboardingWeeklyDelta(s: OnboardingState): number {
   if (!s.completedAt) return 0;
   const planned = (s.savingsMonthly ?? 0) + (s.investMonthly ?? 0);
-  return (DEFAULT_SAVINGS_GOAL_PER_MONTH - planned) / WEEKS_PER_MONTH;
+  return (DEFAULT_SAVINGS_GOAL_PER_MONTH - planned + (s.monthlyAdjust ?? 0)) / WEEKS_PER_MONTH;
 }

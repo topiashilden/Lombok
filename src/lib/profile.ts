@@ -10,12 +10,13 @@
 // Each status carries the evidence sentences that justify it, shown to the person.
 import type { DemoCustomer } from "@/lib/demo";
 
-export type Status = "worker" | "part-time" | "student" | "between-jobs" | "retired";
+export type Status = "worker" | "part-time" | "student" | "student-working" | "between-jobs" | "retired";
 
 export const STATUS_LABEL: Record<Status, string> = {
   worker: "Working full time",
   "part-time": "Working part time or irregular hours",
   student: "Studying",
+  "student-working": "Studying and working",
   "between-jobs": "Between jobs",
   retired: "Retired",
 };
@@ -90,7 +91,10 @@ export function inferProfile(c: DemoCustomer): Profile {
   // 1. A study grant is the clearest signal of a student, with or without work on the side.
   if (grantMonths.length >= 3) {
     evidence.push(`A study grant (Kela) was paid in ${grantMonths.length} of the last 12 months, about ${eur(round(grantMedian))} a month.`);
-    if (salaryMonths.length) evidence.push(`${salaryLine} That looks like work next to your studies.`);
+    if (salaryMonths.length >= 3) {
+      evidence.push(`${salaryLine} That looks like work next to your studies.`);
+      return { ...base, status: "student-working", confidence: "high", evidence };
+    }
     return { ...base, status: "student", confidence: "high", evidence };
   }
 

@@ -1,33 +1,21 @@
-// Matches what a person says they want ("safe", "green", "for 5+ years") to funds that fit, and states
-// the standard facts about each. It is a screener, not an adviser:
+// Matches what a person says they want ("safe", "green", "for 5+ years") to S-Pankki's funds that fit, and states the
+// standard facts about each. It is a screener, not an adviser:
 //  - it never ranks, never says "best" and never says "buy this";
-//  - risk is the standard 1-7 scale from fund fact sheets (SRI), not our own opinion;
+//  - risk is the standard 1-7 class from each fund's fact sheet, not our own opinion;
 //  - the sustainability label is the EU's SFDR article, which describes what a fund discloses, not how green it is.
-// Naming a specific product as right for a specific person is investment advice and needs a licence. S-Pankki has one,
-// so in production this list would be S-Pankki's real catalogue and the service would be theirs.
-//
-// ILLUSTRATIVE: the funds below are made up. They are not real products, fees or risk classes.
+// Naming a specific product as right for a specific person is investment advice and needs a licence. S-Pankki has one, so in
+// production this is S-Pankki's service. The funds and their facts are in spankki-funds.ts.
+import { SPANKKI_FUNDS, type FundKind, type SpankkiFund } from "@/lib/spankki-funds";
 
-export type Sfdr = "none" | "article 8" | "article 9";
+export type CatalogFund = SpankkiFund & { what: string };
 
-export type CatalogFund = {
-  id: string;
-  name: string;
-  what: string; // one plain sentence
-  risk: number; // 1 (low) to 7 (high), as on a fund fact sheet
-  sfdr: Sfdr;
-  yearlyFeePct: number;
+const KIND_LABEL: Record<FundKind, string> = {
+  equity: "Equity fund.",
+  bond: "Bond fund.",
+  mixed: "Mixed fund, equities and bonds.",
 };
 
-export const CATALOG: CatalogFund[] = [
-  { id: "short-bond", name: "Short-term bond fund", what: "Short-dated bonds. Small swings, for money you may need soon.", risk: 2, sfdr: "none", yearlyFeePct: 0.3 },
-  { id: "green-bond", name: "Sustainable bond fund", what: "Bonds of issuers screened on environmental and social criteria.", risk: 2, sfdr: "article 8", yearlyFeePct: 0.45 },
-  { id: "balanced", name: "Balanced fund", what: "About half equities, half bonds.", risk: 3, sfdr: "none", yearlyFeePct: 0.9 },
-  { id: "green-balanced", name: "Sustainable balanced fund", what: "About half equities, half bonds, with sustainability screens.", risk: 3, sfdr: "article 8", yearlyFeePct: 0.95 },
-  { id: "global-index", name: "Global equity index fund", what: "Thousands of companies worldwide, low fee.", risk: 4, sfdr: "none", yearlyFeePct: 0.25 },
-  { id: "green-index", name: "Sustainable global equity fund", what: "Companies worldwide, excluding some sectors and favouring better sustainability scores.", risk: 4, sfdr: "article 8", yearlyFeePct: 0.4 },
-  { id: "impact-equity", name: "Climate and clean-energy equity fund", what: "Companies in one theme, so fewer holdings and bigger swings.", risk: 6, sfdr: "article 9", yearlyFeePct: 0.85 },
-];
+export const CATALOG: CatalogFund[] = SPANKKI_FUNDS.map((f) => ({ ...f, what: KIND_LABEL[f.kind] }));
 
 export type Safety = "very" | "balanced" | "growth";
 export type Horizon = "soon" | "mid" | "long";
@@ -46,7 +34,8 @@ export const HORIZON_LABEL: Record<Horizon, { title: string; years: number }> = 
   long: { title: "7 years or more", years: 10 },
 };
 
-const MAX_RISK: Record<Safety, number> = { very: 2, balanced: 4, growth: 6 };
+// The highest risk class each choice accepts. S-Pankki's open funds run from 1 to 4.
+const MAX_RISK: Record<Safety, number> = { very: 2, balanced: 3, growth: 6 };
 
 /** A common rule of thumb: the higher the risk class, the longer the money should be able to stay put. */
 export function minYearsFor(risk: number): number {
@@ -78,12 +67,12 @@ export function matchFunds(p: Prefs): { matches: Match[]; why: string[] } {
   let pool = CATALOG;
   if (p.green) {
     pool = pool.filter((f) => f.sfdr !== "none");
-    why.push("Only funds with an EU sustainability label (SFDR article 8 or 9).");
+    why.push("Only funds with an EU sustainability label (article 8 or 9).");
   }
   const byRisk = pool.filter((f) => f.risk <= maxRisk);
-  if (byRisk.length < pool.length) why.push(`Risk class ${maxRisk} or lower, because you want ${SAFETY_LABEL[p.safety].title.toLowerCase()}.`);
+  if (byRisk.length < pool.length) why.push(`Risk class ${maxRisk} or lower, because you chose "${SAFETY_LABEL[p.safety].title.toLowerCase()}".`);
   const byHorizon = byRisk.filter((f) => minYearsFor(f.risk) <= years);
-  if (byHorizon.length < byRisk.length) why.push(`Left out funds whose risk suggests keeping money invested longer than ${HORIZON_LABEL[p.horizon].title.toLowerCase()}.`);
+  if (byHorizon.length < byRisk.length) why.push(`Left out funds whose risk suggests keeping the money invested longer than ${HORIZON_LABEL[p.horizon].title.toLowerCase()}.`);
 
   const matches = byHorizon
     .map((fund) => ({ fund, minYears: minYearsFor(fund.risk) }))

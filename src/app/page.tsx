@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, MessageCircle, ReceiptText } from "lucide-react";
+import { ArrowRight, CalendarDays, MessageCircle, ReceiptText } from "lucide-react";
 import { LiveWeeklyEuro, ResetDemoButton, SwitchBoostNote } from "@/components/live-budget";
 import { OnboardingGate, PlanCard } from "@/components/onboarding-home";
 import { OverdueBillCard } from "@/components/overdue-bill";
@@ -39,7 +39,16 @@ export default function Home() {
 
       {/* The one number */}
       <Slab className="mt-4">
-        <p className="text-[15px] text-white/70">Safe to spend this week</p>
+        <div className="flex items-start justify-between gap-3">
+          <p className="text-[15px] text-white/70">Safe to spend this week</p>
+          <Link
+            href="/calendar"
+            className="-mt-1 -mr-1 flex h-11 items-center gap-1.5 rounded-full bg-white/12 px-3.5 text-[14px] font-medium text-white active:bg-white/20"
+          >
+            <CalendarDays className="size-[18px]" aria-hidden />
+            Calendar
+          </Link>
+        </div>
         <p
           className={`num animate-rise mt-1 font-display text-[64px] leading-none font-semibold tracking-[-0.035em] ${over ? "text-[#ffb4a3]" : ""}`}
         >

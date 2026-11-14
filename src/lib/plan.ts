@@ -23,7 +23,7 @@ export type PlanBase = {
   everydayMonthly: number; // basket 3: what the person actually spends on everyday things
   cashBalance: number | null; // money on the account today, if known
   investsMonthlyToday: number; // money already moving to investing each month
-  status: "worker" | "part-time" | "student" | "between-jobs" | "retired";
+  status: "worker" | "part-time" | "student" | "student-working" | "between-jobs" | "retired";
 };
 
 export type GoalKind = "asp" | "trip" | "other";
@@ -58,7 +58,8 @@ export type Allocation = {
   squeezed: boolean; // everyday spending is already above what is left
   buffer: { target: number; have: number; need: number; monthly: number };
   goals: GoalLine[];
-  investCeiling: number; // the most it is sensible to invest per month right now (0 if not yet)
+  investCeiling: number; // the most it is sensible to invest per month right now, after goals (0 if not yet)
+  investCeilingBeforeGoals: number; // the same, if no savings goals were set
   investMonthly: number; // what the plan sets aside for investing
   savingsMonthly: number; // to the separate savings account: buffer plus goals
   spendMonthly: number;
@@ -101,12 +102,14 @@ export function buildPlan(base: PlanBase, answers: Answers): Allocation {
 
   // Investing: a budget ceiling, only once there is a buffer and income is steady.
   let investCeiling = 0;
+  let investCeilingBeforeGoals = 0;
   if (base.status === "between-jobs") {
     notes.push("While your income is uncertain, keep money you could need soon in savings, not invested.");
   } else if (need > 0) {
     notes.push("Investing comes after a starter buffer. Money you may need soon should not be exposed to market swings.");
   } else {
     investCeiling = down10(Math.max(0, remaining) * INVEST_SHARE);
+    investCeilingBeforeGoals = down10(Math.max(0, room - bufferMonthly) * INVEST_SHARE);
   }
 
   const current = Math.max(0, base.investsMonthlyToday);
@@ -136,6 +139,7 @@ export function buildPlan(base: PlanBase, answers: Answers): Allocation {
     buffer: { target: r0(bufferTarget), have: r0(have), need: r0(need), monthly: r0(bufferMonthly) },
     goals,
     investCeiling,
+    investCeilingBeforeGoals,
     investMonthly,
     savingsMonthly,
     spendMonthly,
