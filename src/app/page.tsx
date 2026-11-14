@@ -8,7 +8,7 @@ import { UpcomingCard } from "@/components/upcoming-card";
 import { Chip, Group, IconTile, Logo, PAGE, Row, Slab, eur, primaryButton } from "@/components/solvo/ui";
 import { safeToSpend, topCategories, unknownBills } from "@/lib/coach";
 import { BASKET_LABELS, type Basket } from "@/lib/demo";
-import { inferSchedule } from "@/lib/schedule";
+import { scheduleFor } from "@/lib/schedule-server";
 import { getSource } from "@/lib/source";
 
 const dateFmt = new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
@@ -20,7 +20,7 @@ const BASKET_COLOR: Record<Basket, string> = { 1: "bg-chart-1", 2: "bg-chart-2",
 export default function Home() {
   const { customer: c, local } = getSource();
   const s = safeToSpend(c);
-  const schedule = inferSchedule(c);
+  const schedule = scheduleFor(c);
   const bills = unknownBills(c);
   const baskets = [1, 2, 3] as Basket[];
   const yearTotal = baskets.reduce((sum, b) => sum + c.summary.basketYear[b], 0);

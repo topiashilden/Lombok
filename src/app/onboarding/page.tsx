@@ -1,5 +1,5 @@
 import { inferProfile } from "@/lib/profile";
-import { inferSchedule } from "@/lib/schedule";
+import { scheduleFor } from "@/lib/schedule-server";
 import { getSource } from "@/lib/source";
 import { OnboardingClient } from "./onboarding-client";
 
@@ -10,7 +10,7 @@ export const metadata = { title: "Your plan · Solvo" };
 export default function OnboardingPage() {
   const { customer: c, local } = getSource();
   const profile = inferProfile(c);
-  const schedule = inferSchedule(c);
+  const schedule = scheduleFor(c);
   const base = {
     // Same inputs as the home page's safe-to-spend, so the plan and the headline number agree.
     incomeMonthly: Math.round(c.summary.salaryYear / 12),

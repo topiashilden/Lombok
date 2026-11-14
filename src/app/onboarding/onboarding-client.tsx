@@ -120,6 +120,12 @@ function ExternalCard({ title, by, href }: { title: string; by: string; href: st
 
 type SheetName = "situation" | "income" | "bills" | null;
 
+// "Helvi Energia Oy · Around the 25th" when the company is known, otherwise just the usual day.
+const billSub = (i: Item) => {
+  const when = `Around the ${ordinal(i.day)}`;
+  return i.detail && !/^Bank data/.test(i.detail) ? `${i.detail} · ${when}` : when;
+};
+
 export function OnboardingClient({ profile, base, schedule, local }: { profile: Profile; base: Base; schedule: Schedule; local: boolean }) {
   const router = useRouter();
   const [step, setStep] = useState(1);
@@ -245,7 +251,7 @@ export function OnboardingClient({ profile, base, schedule, local }: { profile: 
             footer={`${eur.format(fixed)} a month. On payday Solvo sets this aside so the bills are covered.`}
           >
             {outItems.length ? (
-              outItems.map((i) => <Row key={i.id} icon={<MoneyBadge kind="out" />} title={i.label} subtitle={`Around the ${ordinal(i.day)}`} value={<SignedAmount kind="out" value={i.amount} />} />)
+              outItems.map((i) => <Row key={i.id} icon={<MoneyBadge kind="out" />} title={i.label} subtitle={billSub(i)} value={<SignedAmount kind="out" value={i.amount} />} />)
             ) : (
               <p className="px-4 py-4 text-[14px] text-muted-foreground">No fixed bills found. Add yours with the pencil.</p>
             )}
@@ -585,7 +591,7 @@ export function OnboardingClient({ profile, base, schedule, local }: { profile: 
         {outItems.length > 0 && (
           <Group title="Bills Solvo keeps safe">
             {outItems.map((i) => (
-              <Row key={i.id} icon={<MoneyBadge kind="out" />} title={i.label} subtitle={`Around the ${ordinal(i.day)}`} value={<SignedAmount kind="out" value={i.amount} />} />
+              <Row key={i.id} icon={<MoneyBadge kind="out" />} title={i.label} subtitle={billSub(i)} value={<SignedAmount kind="out" value={i.amount} />} />
             ))}
           </Group>
         )}
