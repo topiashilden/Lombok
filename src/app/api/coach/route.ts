@@ -11,7 +11,7 @@ import { MERCHANT_TYPE_NAMES, spending, type SpendingQuery, type SpendingResult 
 export const maxDuration = 30;
 
 // The free tier allows ~20 requests a day per model, so fall back to a lighter model on quota or overload errors.
-const MODELS = [process.env.GEMINI_MODEL ?? "gemini-3.5-flash", "gemini-3.5-flash-lite"];
+const MODELS = [process.env.GEMINI_MODEL ?? "gemini-3.5-flash", "gemini-3.5-flash-lite", "gemini-3-flash-preview", "gemini-3.1-flash-lite"];
 const DEADLINE_MS = 24_000;
 const MAX_TOOL_ROUNDS = 4;
 

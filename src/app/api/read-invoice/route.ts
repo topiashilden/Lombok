@@ -8,7 +8,7 @@ import { READING_PROMPT, READING_SCHEMA, type Reading } from "@/lib/einvoice";
 export const maxDuration = 30;
 
 // The free tier allows ~20 requests a day per model, so fall back to a lighter model on quota or overload errors.
-const MODELS = [process.env.GEMINI_MODEL ?? "gemini-3.5-flash", "gemini-3.5-flash-lite"];
+const MODELS = [process.env.GEMINI_MODEL ?? "gemini-3.5-flash", "gemini-3.5-flash-lite", "gemini-3-flash-preview", "gemini-3.1-flash-lite"];
 const TIMEOUT_MS = 25_000;
 
 // Successful readings are kept for the life of the server instance, so a second visit is instant.
