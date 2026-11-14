@@ -130,6 +130,7 @@ export function TelecomDetail(props: {
       <MarketAgentCard
         db={db}
         onResult={setDb}
+        shortlist={cmp.offers.map((o) => o.id)}
         forYou={
           <>
             For you it compares plans at every speed for your {terms.lines} {terms.lines === 1 ? "line" : "lines"}, and

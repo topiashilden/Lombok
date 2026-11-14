@@ -116,13 +116,13 @@ export async function* runElectricityAgent(): AsyncGenerator<AgentEvent> {
     if (byId.has(id)) continue; // the first page that lists an offer is its source
     byId.set(id, {
       id,
-      supplier: o.supplier,
+      supplier: o.supplier.replace(/\s+(Oy|Oyj|Ab)$/i, ""),
       product,
       pricing: o.pricing,
       centsPerKwh: Math.round(o.centsPerKwh * 100) / 100,
       monthlyFee: Math.round(o.monthlyFee * 100) / 100,
       termMonths: o.pricing === "spot" ? null : (o.termMonths ?? null),
-      conditions: o.conditions && !/^(none|no (specific )?conditions|standard contract)/i.test(o.conditions) ? o.conditions : null,
+      conditions: o.conditions && !/^(none|no (specific )?conditions|standard (contract|offer))/i.test(o.conditions) ? o.conditions : null,
       sourceUrl: o.sourceUrl,
       sourceTitle: sources.find((s) => s.url === o.sourceUrl)?.title ?? o.sourceUrl,
       checkedAt: today,
@@ -138,6 +138,11 @@ export async function* runElectricityAgent(): AsyncGenerator<AgentEvent> {
   const suppliers = new Set(offers.map((o) => o.supplier)).size;
   yield { type: "step", step: "check", status: "done", detail: `${offers.length} offers from ${suppliers} suppliers passed${dropped ? `, ${dropped} dropped` : ""}` };
 
+  // The database keeps what earlier runs found: offers seen today replace their old entry,
+  // offers not seen today stay with their older check date. One weak search can't empty the market.
+  const fresh = new Set(offers.map((x) => x.id));
+  const merged = [...offers, ...saved.offers.filter((x) => !fresh.has(x.id))];
+
   yield { type: "step", step: "segment", status: "running", detail: "Ranking offers for each customer group" };
   const db: MarketDb = {
     agent: "electricity",
@@ -145,11 +150,11 @@ export async function* runElectricityAgent(): AsyncGenerator<AgentEvent> {
     mode: "exa",
     queries: Object.values(SEARCHES).map((s) => s.query),
     pagesRead: sources.length,
-    sources: sources.filter((s) => offers.some((o) => o.sourceUrl === s.url)),
+    sources: uniqueSources([sources, saved.sources]).filter((s) => merged.some((x) => x.sourceUrl === s.url)),
     spotExpectedAvgCents: saved.spotExpectedAvgCents,
-    offers,
-    segments: buildSegments(offers, saved.spotExpectedAvgCents),
+    offers: merged,
+    segments: buildSegments(merged, saved.spotExpectedAvgCents),
   };
-  yield { type: "step", step: "segment", status: "done", detail: `Best offers ready for ${db.segments.length} customer groups` };
+  yield { type: "step", step: "segment", status: "done", detail: `${merged.length} offers in the database, best ones ready for ${db.segments.length} customer groups` };
   yield { type: "result", db, live: true };
 }
