@@ -30,7 +30,7 @@ export function TopBar({ back }: { back?: ReactNode }) {
 
 export function BackLink({ href, label }: { href: string; label: string }) {
   return (
-    <Link href={href} className={backClass}>
+    <Link href={href} className={backClass} transitionTypes={["nav-back"]}>
       <ChevronLeft className="size-5" strokeWidth={2.25} aria-hidden />
       {label}
     </Link>
