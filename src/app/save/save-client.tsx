@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useState } from "react";
 import { CalendarDays, Landmark, PiggyBank, Receipt, Target, TrendingUp } from "lucide-react";
+import { PortfolioChart } from "@/components/portfolio-chart";
+import { PORTFOLIO_MONTHS, portfolio } from "@/data/portfolio";
 import { ApproveSheet } from "@/app/bills/switch-ui";
 import { Chip, Group, IconTile, PAGE, PageTitle, Row, Slab, TopBar, eur, primaryButton, secondaryButton } from "@/components/solvo/ui";
 import { FUND_TYPES, FUNDS, FUNDS_SOURCE, fundById, projectFund, type FundType } from "@/lib/funds";
@@ -12,6 +14,28 @@ const YEARS = 10;
 const DAY_OF_MONTH = 2; // the day after a typical salary day
 const pct = (n: number) => `${n.toLocaleString("fi-FI")} %`;
 const dateFmt = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
+
+const PF = portfolio();
+const signed = (n: number) => `${n >= 0 ? "+" : "−"}${eur.format(Math.abs(n))}`;
+const signedPct = (n: number) => `${n >= 0 ? "+" : "−"}${Math.abs(n).toLocaleString("fi-FI", { maximumFractionDigits: 1 })} %`;
+
+/** The 10-year projection for a monthly amount, on a light card (the Slab is the portfolio). */
+function Projection({ monthly, fundId }: { monthly: number; fundId: string }) {
+  const f = fundById(fundId);
+  const p = projectFund(monthly, YEARS, f);
+  return (
+    <section className="mt-4 rounded-2xl bg-card p-4 shadow-[0_1px_3px_rgba(15,42,31,0.06)]">
+      <p className="text-[13px] text-muted-foreground">
+        {eur.format(monthly)} a month for {YEARS} years could become
+      </p>
+      <p className="num mt-1 font-display text-[34px] leading-none font-semibold tracking-[-0.03em]">{eur.format(p.value)}</p>
+      <p className="mt-3 text-[13px] leading-snug text-muted-foreground">
+        {eur.format(p.deposited)} of your own money. Illustrative {pct(f.illustrativeReturnPct)} a year before fees; fees take
+        about {eur.format(p.fees)} over {YEARS} years. Funds can also lose value.
+      </p>
+    </section>
+  );
+}
 
 function nextInvestDate(asOf: string) {
   const d = new Date(`${asOf}T00:00:00Z`);
@@ -41,58 +65,67 @@ export function SaveClient(props: Props) {
   const fromBills = billShare === "all" ? freed : billShare === "half" ? Math.round(freed / 2) : 0;
   const monthly = props.savingsGoal + fromBills;
   const fund = fundById(fundId);
-  const proj = projectFund(monthly, YEARS, fund);
   const next = nextInvestDate(props.asOf);
 
   const now = (
-    <Group title="Right now" aside={`as of ${dateFmt.format(new Date(`${props.asOf}T00:00:00Z`))}`}>
-      <Row
-        icon={
-          <IconTile tone="grey">
-            <Landmark />
-          </IconTile>
-        }
-        title="On your account"
-        value={eur.format(props.balance)}
-      />
-      <Row
-        icon={
-          <IconTile tone={props.inFunds > 0 || plan ? "green" : "grey"}>
-            <TrendingUp />
-          </IconTile>
-        }
-        title="In S-Pankki funds"
-        subtitle={
-          plan
-            ? `First investment on ${next}`
-            : props.fundDeposits
-              ? `${props.fundDeposits} fund deposits in the last 2 years`
-              : "No fund savings in the last 2 years"
-        }
-        value={eur.format(props.inFunds)}
-      />
-    </Group>
+    <>
+      <Slab>
+        <p className="text-[15px] text-white/70">Your funds are worth</p>
+        <p className="num mt-1 font-display text-[56px] leading-none font-semibold tracking-[-0.035em]">{eur.format(PF.value)}</p>
+        <p className="mt-2 text-[15px] text-white/80">
+          <span className="num font-semibold text-mint">
+            {signed(PF.gain)} ({signedPct(PF.gainPct)})
+          </span>{" "}
+          on the {eur.format(PF.invested)} you put in
+        </p>
+        <PortfolioChart months={PORTFOLIO_MONTHS} values={PF.total} invested={PF.invested} />
+        <p className="mt-4 border-t border-white/10 pt-3 text-[13px] leading-snug text-white/65">
+          Last 12 months {signedPct(PF.yearChangePct)}.{" "}
+          {plan ? `Your monthly plan starts on ${next}.` : "You haven't added to your funds since 2023."}
+        </p>
+      </Slab>
+      <Group title="Your funds" aside="value · last 12 months">
+        {PF.holdings.map((h) => {
+          const f = fundById(h.fundId);
+          return (
+            <Row
+              key={h.fundId}
+              icon={
+                <IconTile>
+                  <TrendingUp />
+                </IconTile>
+              }
+              title={f.name.replace("S-Pankki ", "")}
+              subtitle={`Since ${h.since}, you put in ${eur.format(h.invested)}`}
+              value={eur.format(h.value)}
+              valueSub={signedPct(h.yearChangePct)}
+            />
+          );
+        })}
+        <Row
+          icon={
+            <IconTile tone="grey">
+              <Landmark />
+            </IconTile>
+          }
+          title="On your account"
+          subtitle={`Cash, ${dateFmt.format(new Date(`${props.asOf}T00:00:00Z`))}`}
+          value={eur.format(props.balance)}
+        />
+      </Group>
+    </>
   );
 
   if (plan) {
     const pf = fundById(plan.fundId);
-    const p = projectFund(plan.monthly, YEARS, pf);
     const billsPart = plan.fromBills ?? (plan.fromGoal === undefined ? plan.monthly : 0); // older plans: all from bills
     return (
       <main className={PAGE}>
         <TopBar />
-        <PageTitle title="Your investment plan">
-          {eur.format(plan.monthly)} into {pf.name} on the {plan.dayOfMonth}nd of every month. You approved it; change or
-          stop it any time.
+        <PageTitle title="Your investments">
+          Plus {eur.format(plan.monthly)} a month into {pf.name.replace("S-Pankki ", "")}, on the {plan.dayOfMonth}nd. Change
+          or stop it any time.
         </PageTitle>
-        <Slab>
-          <p className="text-[15px] text-white/70">In {YEARS} years, possibly</p>
-          <p className="num mt-1 font-display text-[56px] leading-none font-semibold tracking-[-0.035em]">{eur.format(p.value)}</p>
-          <p className="mt-4 border-t border-white/10 pt-3 text-[13px] leading-snug text-white/65">
-            {eur.format(p.deposited)} of your own money. Fees take about {eur.format(p.fees)} of the growth over {YEARS} years.
-            Illustrative only: funds can also lose value.
-          </p>
-        </Slab>
         {now}
         <Group title="Each month">
           {(plan.fromGoal ?? 0) > 0 && (
@@ -130,6 +163,7 @@ export function SaveClient(props: Props) {
             value={next}
           />
         </Group>
+        <Projection monthly={plan.monthly} fundId={plan.fundId} />
         <p className="mt-4 px-1 text-[13px] leading-snug text-muted-foreground">
           Safe to spend this week: {eur.format(props.remaining + weeklyBoost(switches, plan))}.
         </p>
@@ -141,24 +175,18 @@ export function SaveClient(props: Props) {
   }
 
   return (
-    <main className={`${PAGE} pb-[calc(6rem+var(--tabbar-h))]`}>
+    <main className={PAGE}>
       <TopBar />
-      <PageTitle title="Invest your savings">
-        Put your monthly savings goal to work in an S-Pankki fund, plus what your cheaper bills free up.
+      <PageTitle title="Your investments">
+        How your S-Pankki funds are doing, and a monthly plan to keep them growing.
       </PageTitle>
 
-      <Slab>
-        <p className="text-[15px] text-white/70">
-          {eur.format(monthly)} a month for {YEARS} years could become
-        </p>
-        <p className="num mt-1 font-display text-[56px] leading-none font-semibold tracking-[-0.035em]">{eur.format(proj.value)}</p>
-        <p className="mt-4 border-t border-white/10 pt-3 text-[13px] leading-snug text-white/65">
-          {eur.format(proj.deposited)} of your own money. Illustrative {pct(fund.illustrativeReturnPct)} a year before fees; fees
-          take about {eur.format(proj.fees)} over {YEARS} years. Funds can also lose value.
-        </p>
-      </Slab>
-
       {now}
+
+      <h2 className="mt-9 px-1 font-display text-[22px] font-semibold tracking-[-0.015em]">Start investing again</h2>
+      <p className="mt-1 px-1 text-[15px] leading-snug text-muted-foreground">
+        Your monthly savings goal, plus what your cheaper bills free up.
+      </p>
 
       <Group
         title="How much each month?"
@@ -267,7 +295,9 @@ export function SaveClient(props: Props) {
         ))}
       </Group>
 
-      <div className="fixed inset-x-0 bottom-0 z-20 mx-auto w-full max-w-[430px] bg-gradient-to-t from-background via-background/95 to-background/0 px-4 pt-6 pb-[calc(0.75rem+var(--tabbar-h))]">
+      <Projection monthly={monthly} fundId={fund.id} />
+
+      <div className="mt-4">
         <button type="button" className={primaryButton} onClick={() => setConfirming(true)}>
           <PiggyBank className="size-[18px]" aria-hidden />
           Start investing {eur.format(monthly)} a month

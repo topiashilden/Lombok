@@ -1,5 +1,7 @@
 "use client";
 
+import { useRouter } from "next/navigation";
+
 import {
   Bell,
   Check,
@@ -23,6 +25,9 @@ import { UNPAID } from "@/data/reminders";
 import {
   clearCachedReadings,
   resetDemo,
+  setDemoMode,
+  useDemoMode,
+  type DemoMode,
   useBillActions,
   useCachedReadings,
   useSavingsPlan,
@@ -41,6 +46,8 @@ export function ProfileClient(props: {
   postalCode: string;
   savingsGoal: number;
 }) {
+  const router = useRouter();
+  const mode = useDemoMode();
   const switches = Object.values(useSwitches()).filter((s) => !!s);
   const plan = useSavingsPlan();
   const readCount = Object.keys(useCachedReadings()).length;
@@ -48,9 +55,10 @@ export function ProfileClient(props: {
   const paid = bills[UNPAID.id]?.action === "paid";
   const anything =
     switches.length > 0 || !!plan || Object.keys(bills).length > 0;
-  const initials = props.name
+  const name = mode === "new" ? "New customer" : props.name;
+  const initials = name
     .split(" ")
-    .map((w) => w[0])
+    .map((w) => w[0].toUpperCase())
     .join("");
 
   return (
@@ -62,13 +70,47 @@ export function ProfileClient(props: {
         </span>
         <div>
           <h1 className="font-display text-[26px] leading-tight font-semibold tracking-[-0.02em]">
-            {props.name}
+            {name}
           </h1>
           <p className="text-[15px] text-muted-foreground">
-            {props.age} years, {props.postalCode} Espoo
+            {mode === "new" ? "First time in Solvo" : `${props.age} years, ${props.postalCode} Espoo`}
           </p>
         </div>
       </section>
+
+      <Group
+        title="Demo account"
+        footer={
+          mode === "new"
+            ? "A first-time customer goes through onboarding. Same synthetic bank data as Aino, starting from scratch."
+            : "Switching starts the account from scratch: approvals and plans are cleared."
+        }
+      >
+        <div className="flex gap-2 p-2" role="radiogroup" aria-label="Demo account">
+          {(
+            [
+              ["aino", "Aino", "Set up, with history"],
+              ["new", "New customer", "Starts with onboarding"],
+            ] as [DemoMode, string, string][]
+          ).map(([m, label, sub]) => (
+            <button
+              key={m}
+              type="button"
+              role="radio"
+              aria-checked={mode === m}
+              onClick={() => {
+                if (m === mode) return;
+                setDemoMode(m);
+                router.push(m === "new" ? "/onboarding" : "/");
+              }}
+              className={`flex min-h-14 flex-1 flex-col items-start justify-center rounded-xl px-3 py-2 text-left ${mode === m ? "bg-primary text-primary-foreground" : "bg-muted"}`}
+            >
+              <span className="text-[15px] font-semibold">{label}</span>
+              <span className={`text-[12px] ${mode === m ? "text-primary-foreground/80" : "text-muted-foreground"}`}>{sub}</span>
+            </button>
+          ))}
+        </div>
+      </Group>
 
       <Group
         title="What you've approved"

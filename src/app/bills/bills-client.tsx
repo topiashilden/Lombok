@@ -2,6 +2,7 @@
 
 import { addTransitionType, startTransition, useEffect, useMemo, useState } from "react";
 import { SubScreen } from "@/components/solvo/screen";
+import { BillHistory, type PaidBill } from "./bill-history";
 import { ArrowRight, Cable, Check, FileText, Smartphone, Sparkles, Zap } from "lucide-react";
 import {
   BackButton,
@@ -72,7 +73,13 @@ function termsFrom(r: Reading): ContractTerms {
   };
 }
 
-export function BillsClient(props: { asOf: string; invoices: InvoiceMeta[]; weeklyBudget: number; remaining: number }) {
+export function BillsClient(props: {
+  asOf: string;
+  invoices: InvoiceMeta[];
+  weeklyBudget: number;
+  remaining: number;
+  history: PaidBill[];
+}) {
   const [fetched, setLoaded] = useState<Record<string, Loaded>>({});
   const stored = useCachedReadings() as Record<string, Loaded>;
   // Readings from this visit win (they carry the reading time); earlier ones come from the device cache.
@@ -174,6 +181,8 @@ export function BillsClient(props: { asOf: string; invoices: InvoiceMeta[]; week
                   setPhotos((prev) => [...prev, { id, payment: null }]);
                 }}
               />
+
+              <BillHistory bills={props.history} asOf={props.asOf} />
             </>
           )}
         </div>

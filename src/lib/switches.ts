@@ -97,6 +97,20 @@ export function clearCachedReadings() {
   readingStore.set(null);
 }
 
+// Which demo account the app shows. "aino" (default): the finished account, no onboarding prompt.
+// "new": a first-time customer; starts from a clean slate and goes through onboarding.
+export type DemoMode = "aino" | "new";
+const modeStore = createStore<{ mode?: DemoMode }>("solvo.demo-mode.v1", {});
+export const readDemoMode = (): DemoMode => modeStore.snapshot().mode ?? "aino";
+export const useDemoMode = (): DemoMode => modeStore.use().mode ?? "aino";
+
+/** Switch demo account. Both start clean: approvals, plans and onboarding are cleared. "new" also re-reads e-invoices. */
+export function setDemoMode(mode: DemoMode) {
+  resetDemo();
+  if (mode === "new") readingStore.set(null);
+  modeStore.set(mode === "aino" ? null : { mode });
+}
+
 export const useSwitches = switchStore.use;
 
 export function useSavingsPlan(): SavingsPlan | null {

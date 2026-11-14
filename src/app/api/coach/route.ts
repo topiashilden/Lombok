@@ -1,5 +1,7 @@
 import { SAVED_READINGS } from "@/data/einvoices/saved-readings";
+import { portfolio } from "@/data/portfolio";
 import { UNPAID } from "@/data/reminders";
+import { fundById } from "@/lib/funds";
 import { safeToSpend } from "@/lib/coach";
 import { BASKET_LABELS, MAIN_CUSTOMER, type Basket } from "@/lib/demo";
 import { todayIso, toDemo, toShown } from "@/lib/demo-clock";
@@ -45,6 +47,7 @@ const eur = (n: number) => `€${Math.round(n).toLocaleString("en-US")}`;
 function customerContext() {
   const s = safeToSpend(c);
   const el = SAVED_READINGS.electricity;
+  const pf = portfolio();
   const cmp = compare({
     annualKwh: el.annualConsumptionKwh ?? 6500,
     centsPerKwh: el.priceCentsPerKwh ?? 0,
@@ -77,7 +80,9 @@ Bills Solvo has read from the e-invoices in the bank:
 ${bills}
 Electricity: doing nothing costs ${eur(cmp.doNothing)}/year after the rollover. Best fixed offer is ${cmp.recommended.supplier} ${cmp.recommended.product} at ${eur(cmp.recommended.yearly)}/year, saving ${eur(cmp.recommended.saving)}/year (about ${eur(cmp.recommended.saving / 52)} a week more to spend). The user can switch with one tap in the Bills view after approving.
 
-Unpaid bill: ${UNPAID.supplier}, ${eur(UNPAID.amount)} (${UNPAID.what}), was due ${toShown(UNPAID.dueDate)} and is still open. It belongs to basket 2 (irregular costs), so paying it comes from the irregular set-aside and doesn't lower this week's safe-to-spend. Paying before the reminder avoids a reminder fee. If the user can't pay now, suggest calling the clinic to ask for a later due date or an instalment plan, and that an S-Pankki advisor can help. Solvo is a coach, not a debt collector.`;
+Unpaid bill: ${UNPAID.supplier}, ${eur(UNPAID.amount)} (${UNPAID.what}), was due ${toShown(UNPAID.dueDate)} and is still open. It belongs to basket 2 (irregular costs), so paying it comes from the irregular set-aside and doesn't lower this week's safe-to-spend. Paying before the reminder avoids a reminder fee. If the user can't pay now, suggest calling the clinic to ask for a later due date or an instalment plan, and that an S-Pankki advisor can help. Solvo is a coach, not a debt collector.
+
+Fund holdings (S-Pankki funds, demo values): ${pf.holdings.map((h) => `${fundById(h.fundId).name}, put in ${eur(h.invested)} since ${h.since}, worth ${eur(h.value)} (${h.yearChangePct.toFixed(1)} % in 12 months)`).join("; ")}. Total worth ${eur(pf.value)} on ${eur(pf.invested)} put in (${pf.gainPct.toFixed(1)} %), ${pf.yearChangePct.toFixed(1)} % in the last 12 months. No new fund deposits since 2023. The Save tab can set up a monthly plan. Never recommend a specific fund or predict returns: Solvo doesn't give investment advice.`;
 }
 
 const SYSTEM = `You are Solvo, a friendly money coach inside the S-Pankki bank app. You talk to one customer about their own money.
