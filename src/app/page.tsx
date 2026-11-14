@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { LiveWeeklyEuro, ResetDemoButton, SwitchBoostNote } from "@/components/live-budget";
 import { safeToSpend, topCategories, unknownBills } from "@/lib/coach";
 import { BASKET_LABELS, MAIN_CUSTOMER, type Basket } from "@/lib/demo";
 
@@ -36,7 +37,7 @@ export default function Home() {
         <CardHeader>
           <CardDescription className="text-emerald-200">Safe to spend this week</CardDescription>
           <CardTitle className={`text-5xl font-semibold tracking-tight ${over ? "text-red-300" : ""}`}>
-            {over ? `−${eur.format(-s.remaining)}` : eur.format(s.remaining)}
+            <LiveWeeklyEuro base={s.remaining} signed />
           </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
@@ -47,9 +48,10 @@ export default function Home() {
             />
           </div>
           <p className="text-sm text-emerald-200">
-            {eur.format(s.spentThisWeek)} spent since {fmtDate(s.weekStart)} of your {eur.format(s.weeklyBudget)} weekly
+            {eur.format(s.spentThisWeek)} spent since {fmtDate(s.weekStart)} of your <LiveWeeklyEuro base={s.weeklyBudget} /> weekly
             budget · {s.daysLeft} {s.daysLeft === 1 ? "day" : "days"} left
           </p>
+          <SwitchBoostNote className="text-sm font-medium text-emerald-300" />
         </CardContent>
       </Card>
 
@@ -155,7 +157,8 @@ export default function Home() {
       })}
 
       <footer className="mt-2 text-xs text-muted-foreground">
-        Demo with S-Pankki&apos;s synthetic Junction 2026 dataset, customer {c.id}. The savings goal is an assumption.
+        Demo with S-Pankki&apos;s synthetic Junction 2026 dataset, customer {c.id}. The savings goal is an assumption.{" "}
+        <ResetDemoButton className="underline underline-offset-4" />
       </footer>
     </main>
   );

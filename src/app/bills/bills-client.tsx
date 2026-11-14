@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type { Reading } from "@/lib/einvoice";
 import { compare, OFFERS_UPDATED, type ContractTerms } from "@/lib/offers";
+import { approveSwitch, useSwitches, type BillKey } from "@/lib/switches";
 
 type InvoiceMeta = { id: string; payment: { date: string; amount: number } };
 type Loaded = { reading: Reading; source: "gemini" | "saved"; model?: string; ms: number; cached?: boolean };
@@ -92,7 +93,10 @@ function SourceBadge({ l }: { l: Loaded }) {
   );
 }
 
+const BILL_KEY: Partial<Record<Reading["kind"], BillKey>> = { electricity_energy: "electricity", telecom: "telecom" };
+
 function InvoiceCard({ meta, loaded, onOpen }: { meta: InvoiceMeta; loaded?: Loaded; onOpen: () => void }) {
+  const switches = useSwitches();
   if (!loaded) {
     return (
       <Card size="sm" className="animate-pulse">
@@ -109,7 +113,9 @@ function InvoiceCard({ meta, loaded, onOpen }: { meta: InvoiceMeta; loaded?: Loa
     );
   }
   const r = loaded.reading;
-  const actionable = r.kind === "electricity_energy" && r.switchable;
+  const key = BILL_KEY[r.kind];
+  const switched = key ? switches[key] : undefined;
+  const actionable = r.kind === "electricity_energy" && r.switchable && !switched;
   return (
     <Card size="sm" className={actionable ? "ring-amber-300 bg-amber-50" : ""}>
       <CardHeader>
@@ -127,6 +133,13 @@ function InvoiceCard({ meta, loaded, onOpen }: { meta: InvoiceMeta; loaded?: Loa
         <p className="text-xs text-muted-foreground">
           {r.product} · matched to your payment of {eur2.format(-meta.payment.amount)} on {fmtDate(meta.payment.date)}
         </p>
+        {switched && (
+          <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
+            Switching to {switched.toSupplier} {switched.toProduct}
+            {switched.startDate ? ` from ${fmtDate(switched.startDate)}` : ""}. You save about{" "}
+            {eur.format(switched.yearlySaving)} a year.
+          </p>
+        )}
         {actionable && (
           <Button className="mt-1 bg-emerald-800 text-white hover:bg-emerald-900" onClick={onOpen}>
             Compare electricity offers
@@ -326,7 +339,19 @@ function ElectricityDetail(props: { loaded: Loaded; weeklyBudget: number; remain
               <li>No switching fees. You can cancel within 14 days.</li>
             </ul>
             <div className="flex gap-2">
-              <Button className="h-10 flex-1 bg-emerald-800 text-white hover:bg-emerald-900" onClick={() => setStage("done")}>
+              <Button className="h-10 flex-1 bg-emerald-800 text-white hover:bg-emerald-900" onClick={() => {
+                  approveSwitch({
+                    bill: "electricity",
+                    fromSupplier: r.supplier,
+                    toSupplier: chosen.supplier,
+                    toProduct: chosen.product,
+                    yearlySaving: Math.max(0, chosen.saving),
+                    startDate,
+                    approvedAt: new Date().toISOString(),
+                  });
+                  setStage("done");
+                }}
+              >
                 Approve switch
               </Button>
               <Button variant="outline" className="h-10" onClick={() => setStage("compare")}>

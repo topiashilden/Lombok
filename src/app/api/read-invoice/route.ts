@@ -7,14 +7,15 @@ import { READING_PROMPT, READING_SCHEMA, type Reading } from "@/lib/einvoice";
 
 export const maxDuration = 30;
 
-const MODEL = process.env.GEMINI_MODEL ?? "gemini-3.5-flash";
+// The free tier allows ~20 requests a day per model, so fall back to a lighter model on quota or overload errors.
+const MODELS = [process.env.GEMINI_MODEL ?? "gemini-3.5-flash", "gemini-3.5-flash-lite"];
 const TIMEOUT_MS = 25_000;
 
 // Successful readings are kept for the life of the server instance, so a second visit is instant.
 const cache = new Map<string, { reading: Reading; model: string }>();
 
-async function readWithGemini(xml: string, key: string): Promise<Reading> {
-  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`, {
+async function readWithGemini(model: string, xml: string, key: string): Promise<Reading> {
+  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
     method: "POST",
     headers: { "Content-Type": "application/json", "x-goog-api-key": key },
     body: JSON.stringify({
@@ -28,7 +29,7 @@ async function readWithGemini(xml: string, key: string): Promise<Reading> {
     }),
     signal: AbortSignal.timeout(TIMEOUT_MS),
   });
-  if (!res.ok) throw new Error(`Gemini ${res.status}: ${(await res.text()).slice(0, 200)}`);
+  if (!res.ok) throw Object.assign(new Error(`Gemini ${res.status}: ${(await res.text()).slice(0, 200)}`), { status: res.status });
   const data = await res.json();
   const text: string | undefined = data?.candidates?.[0]?.content?.parts?.find((p: { text?: string }) => p.text)?.text;
   if (!text) throw new Error("Gemini returned no text");
@@ -47,13 +48,19 @@ export async function POST(request: Request) {
   const started = Date.now();
   const key = process.env.GEMINI_API_KEY;
   if (key) {
-    try {
-      const reading = await readWithGemini(invoice.xml, key);
-      cache.set(invoice.id, { reading, model: MODEL });
-      return Response.json({ reading, source: "gemini", model: MODEL, ms: Date.now() - started });
-    } catch (e) {
-      return Response.json({ reading: saved, source: "saved", ms: Date.now() - started, error: String(e) });
+    let error: unknown;
+    for (const model of MODELS) {
+      try {
+        const reading = await readWithGemini(model, invoice.xml, key);
+        cache.set(invoice.id, { reading, model });
+        return Response.json({ reading, source: "gemini", model, ms: Date.now() - started });
+      } catch (e) {
+        error = e;
+        const status = (e as { status?: number }).status;
+        if (status !== 429 && status !== 503) break;
+      }
     }
+    return Response.json({ reading: saved, source: "saved", ms: Date.now() - started, error: String(error) });
   }
   return Response.json({ reading: saved, source: "saved", ms: 0, error: "GEMINI_API_KEY not set" });
 }
