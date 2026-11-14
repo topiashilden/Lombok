@@ -17,7 +17,8 @@ const APP_ID = process.env.ENABLE_APP_ID;
 const KEY_PATH = process.env.ENABLE_KEY_PATH;
 const OUT = "data/private/nordea-api";
 const SESSION_FILE = `${OUT}/session.json`;
-const DATE_FROM = process.env.NORDEA_DATE_FROM ?? "2025-01-01";
+// Nordea allows at most 540 days of history. Ask for 535 to stay inside the limit.
+const DATE_FROM = process.env.NORDEA_DATE_FROM ?? new Date(Date.now() - 535 * 864e5).toISOString().slice(0, 10);
 
 if (!APP_ID || !KEY_PATH) {
   console.error("Set ENABLE_APP_ID and ENABLE_KEY_PATH in .env.local and run with --env-file=.env.local");
