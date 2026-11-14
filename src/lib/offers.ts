@@ -13,9 +13,13 @@ export type ElectricityOffer = {
   monthlyFee: number;
   termMonths: number | null;
   note?: string;
+  renewable: boolean; // the source says the electricity is from wind, hydro or solar
   sourceUrl: string;
   checkedAt: string;
 };
+
+/** What the person says matters most. It decides the coach's pick; every option stays selectable. */
+export type ElectricityPreference = "cheapest" | "fixed" | "renewable";
 
 export const OFFERS_UPDATED = SAVED_ELECTRICITY_DB.ranAt.slice(0, 10);
 
@@ -35,10 +39,15 @@ export type Comparison = {
   doNothing: number; // yearly cost after the automatic rollover (or current if none)
   offers: (ElectricityOffer & { yearly: number; saving: number })[]; // saving vs doNothing, best first
   recommended: ElectricityOffer & { yearly: number; saving: number };
+  pickReason: string;
   segment: Segment;
 };
 
-export function compare(t: ContractTerms, db: MarketDb = SAVED_ELECTRICITY_DB): Comparison {
+export function compare(
+  t: ContractTerms,
+  db: MarketDb = SAVED_ELECTRICITY_DB,
+  preference: ElectricityPreference = "fixed",
+): Comparison {
   const current = annualCost(t.annualKwh, t.centsPerKwh, t.monthlyFee);
   const doNothing =
     t.centsAfterEnd != null ? annualCost(t.annualKwh, t.centsAfterEnd, t.monthlyFeeAfterEnd ?? t.monthlyFee) : current;
@@ -57,6 +66,7 @@ export function compare(t: ContractTerms, db: MarketDb = SAVED_ELECTRICITY_DB): 
         monthlyFee: o.monthlyFee,
         termMonths: o.termMonths,
         note: o.conditions ?? (spot ? "Price changes every hour; cheaper on average, but winter spikes hit hard" : undefined),
+        renewable: o.origin === "renewable",
         sourceUrl: o.sourceUrl,
         checkedAt: o.checkedAt,
         yearly,
@@ -64,7 +74,15 @@ export function compare(t: ContractTerms, db: MarketDb = SAVED_ELECTRICITY_DB): 
       };
     })
     .sort((a, b) => a.yearly - b.yearly);
-  // The coach recommends the cheapest fixed price: predictable is better for a budget.
-  const recommended = offers.find((o) => o.pricing === "fixed") ?? offers[0];
-  return { current, doNothing, offers, recommended, segment };
+  // The coach's pick follows what the person says matters most. Default: the cheapest fixed price,
+  // because predictable is better for a budget.
+  const fixed = offers.find((o) => o.pricing === "fixed");
+  const green = offers.find((o) => o.renewable);
+  const [recommended, pickReason] =
+    preference === "cheapest"
+      ? [offers[0], "Coach's pick: the lowest expected cost"]
+      : preference === "renewable" && green
+        ? [green, "Coach's pick: the cheapest renewable electricity"]
+        : [fixed ?? offers[0], "Coach's pick: a fixed price is easier to budget"];
+  return { current, doNothing, offers, recommended, pickReason, segment };
 }

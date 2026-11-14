@@ -16,7 +16,7 @@ export type { AgentEvent, AgentStep } from "./market-agent-events";
 
 type Pricing = MarketOffer["pricing"];
 
-const SEARCHES: Record<Pricing, { query: string; objective: string }> = {
+const SEARCHES: Record<Pricing | "renewable", { query: string; objective: string }> = {
   fixed: {
     query: "määräaikainen sähkösopimus hinta snt/kWh perusmaksu",
     objective:
@@ -27,6 +27,11 @@ const SEARCHES: Record<Pricing, { query: string; objective: string }> = {
     objective:
       "Build a price list of current Finnish consumer spot-price (pörssisähkö) electricity contracts. Comparison tables and supplier price lists covering several suppliers rank first. Pull supplier, product, the supplier's margin in c/kWh incl. VAT, and the monthly base fee in EUR incl. VAT.",
   },
+  renewable: {
+    query: "uusiutuva sähkö tuulisähkö sähkösopimus hinta snt/kWh perusmaksu",
+    objective:
+      "Build a price list of current Finnish consumer electricity contracts whose electricity is renewable (wind, hydro or solar, e.g. tuulisähkö, vesisähkö, EKOenergia). Supplier price pages rank first. Pull supplier, product, fixed or spot pricing, energy price or margin in c/kWh incl. VAT, monthly base fee incl. VAT, and the stated energy origin.",
+  },
 };
 
 const SYSTEM_PROMPT =
@@ -35,6 +40,7 @@ const SYSTEM_PROMPT =
   "If a price is an introductory price for the first months, report the regular price that applies after it and mention the introductory offer in conditions. " +
   "conditions is a short English note on limits stated on the page for that offer, such as new customers only, an introductory discount, or a region limit. Omit the field when the page states none; never write that there are none or that terms may vary. " +
   "product is the product name without the supplier name. " +
+  "origin is renewable only when the page says this product's electricity is from wind, hydro or solar (tuulisähkö, vesisähkö, aurinkosähkö, uusiutuva, EKOenergia); fossil-free when it says carbon-free or fossil-free and includes nuclear (hiilivapaa, fossiiliton); otherwise not stated. Mention the source of renewable electricity (such as 100% wind power) in conditions. " +
   "Never guess or average a price; omit an offer whose price you cannot verify on the page.";
 
 const OUTPUT_SCHEMA = {
@@ -51,26 +57,39 @@ const OUTPUT_SCHEMA = {
           monthlyFee: { type: "number" },
           termMonths: { type: "number" },
           conditions: { type: "string" },
+          pricing: { type: "string", enum: ["fixed", "spot"] },
+          origin: { type: "string", enum: ["renewable", "fossil-free", "not stated"] },
           sourceUrl: { type: "string" },
         },
-        required: ["supplier", "product", "centsPerKwh", "monthlyFee", "sourceUrl"],
+        required: ["supplier", "product", "centsPerKwh", "monthlyFee", "pricing", "origin", "sourceUrl"],
       },
     },
   },
   required: ["offers"],
 };
 
-type RawOffer = { supplier: string; product: string; centsPerKwh: number; monthlyFee: number; termMonths?: number; conditions?: string; sourceUrl: string };
+type RawOffer = {
+  supplier: string;
+  product: string;
+  centsPerKwh: number;
+  monthlyFee: number;
+  termMonths?: number;
+  conditions?: string;
+  pricing?: Pricing;
+  origin?: "renewable" | "fossil-free" | "not stated";
+  sourceUrl: string;
+};
 
-async function exaSearch(pricing: Pricing) {
+async function exaSearch(search: keyof typeof SEARCHES) {
   const { results, items } = await exaStructured<RawOffer>({
-    ...SEARCHES[pricing],
+    ...SEARCHES[search],
     systemPrompt: SYSTEM_PROMPT,
     outputSchema: OUTPUT_SCHEMA,
     arrayKey: "offers",
     priceFields: ["centsPerKwh", "monthlyFee"],
   });
-  return { results, offers: items.map((o) => ({ ...o, pricing })) };
+  // The fixed and spot searches know the pricing; the renewable search takes it from the page.
+  return { results, offers: items.map((o) => ({ ...o, pricing: search === "renewable" ? (o.pricing ?? "fixed") : search })) };
 }
 
 /** Plausible consumer prices only. Anything outside these ranges is a misread, not a deal. */
@@ -93,7 +112,7 @@ export async function* runElectricityAgent(): AsyncGenerator<AgentEvent> {
 
   let found: Awaited<ReturnType<typeof exaSearch>>[];
   try {
-    found = await Promise.all((["fixed", "spot"] as const).map((p) => exaSearch(p)));
+    found = await Promise.all((["fixed", "spot", "renewable"] as const).map((p) => exaSearch(p)));
   } catch (e) {
     yield { type: "step", step: "search", status: "failed", detail: "Search failed, using the last saved run" };
     yield fallback(String(e));
@@ -111,18 +130,23 @@ export async function* runElectricityAgent(): AsyncGenerator<AgentEvent> {
   const byId = new Map<string, MarketOffer>();
   for (const o of raw) {
     if (o.lowConfidence || !plausible(o) || !/^https?:\/\//.test(o.sourceUrl)) continue;
-    const product = o.product.replace(new RegExp(`^${o.supplier.split(" ")[0]}\\s+`, "i"), "") || o.product;
-    const id = slug(`${o.supplier}-${product}`);
+    const supplier = o.supplier.replace(/\s+(Oy|Oyj|Ab)$/i, "");
+    const product = o.product.replace(new RegExp(`^${supplier.split(" ")[0]}(\\s+(Oy|Oyj|Ab))?\\s+`, "i"), "") || o.product;
+    // One id per supplier, product and term, however the page writes the term ("24 kk", "(24 kk)", "24 months").
+    const term = o.pricing === "spot" ? null : (o.termMonths ?? null);
+    const base = product.replace(/\(?\b\d+\s*(kk|kuukautta|months?)\b\)?/gi, "").replace(/\s+/g, " ").trim();
+    const id = slug(`${supplier}-${base}${term ? ` ${term} kk` : ""}`);
     if (byId.has(id)) continue; // the first page that lists an offer is its source
     byId.set(id, {
       id,
-      supplier: o.supplier.replace(/\s+(Oy|Oyj|Ab)$/i, ""),
+      supplier,
       product,
       pricing: o.pricing,
       centsPerKwh: Math.round(o.centsPerKwh * 100) / 100,
       monthlyFee: Math.round(o.monthlyFee * 100) / 100,
-      termMonths: o.pricing === "spot" ? null : (o.termMonths ?? null),
+      termMonths: term,
       conditions: o.conditions && !/^(none|no (specific )?conditions|standard (contract|offer))/i.test(o.conditions) ? o.conditions : null,
+      origin: o.origin === "renewable" || o.origin === "fossil-free" ? o.origin : null,
       sourceUrl: o.sourceUrl,
       sourceTitle: sources.find((s) => s.url === o.sourceUrl)?.title ?? o.sourceUrl,
       checkedAt: today,
@@ -141,7 +165,11 @@ export async function* runElectricityAgent(): AsyncGenerator<AgentEvent> {
   // The database keeps what earlier runs found: offers seen today replace their old entry,
   // offers not seen today stay with their older check date. One weak search can't empty the market.
   const fresh = new Set(offers.map((x) => x.id));
-  const merged = [...offers, ...saved.offers.filter((x) => !fresh.has(x.id))];
+  const savedById = new Map(saved.offers.map((x) => [x.id, x]));
+  const merged = [
+    ...offers.map((x) => (x.origin ? x : { ...x, origin: savedById.get(x.id)?.origin ?? null })),
+    ...saved.offers.filter((x) => !fresh.has(x.id)),
+  ];
 
   yield { type: "step", step: "segment", status: "running", detail: "Ranking offers for each customer group" };
   const db: MarketDb = {

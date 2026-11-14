@@ -14,6 +14,8 @@ export type MarketOffer = {
   monthlyFee: number; // EUR incl. VAT
   termMonths: number | null;
   conditions: string | null; // e.g. "new customers only", "first 3 months discounted"
+  origin?: "renewable" | "fossil-free" | null; // as stated by the source; null or missing = not stated
+  originNote?: string | null; // e.g. "100% wind power", "EKOenergia"
   sourceUrl: string;
   sourceTitle: string;
   checkedAt: string; // YYYY-MM-DD
@@ -47,15 +49,18 @@ export function offerYearly(o: MarketOffer, kwh: number, spotAvg: number) {
   return (kwh * cents) / 100 + o.monthlyFee * 12;
 }
 
-/** The pre-computed shortlist per segment: the 4 cheapest fixed and 2 cheapest spot offers at that consumption. */
+/** The pre-computed shortlist per segment: the 4 cheapest fixed, 2 cheapest spot and 2 cheapest renewable offers. */
 export function buildSegments(offers: MarketOffer[], spotAvg: number): Segment[] {
-  const cheapest = (pricing: MarketOffer["pricing"], kwh: number, n: number) =>
+  const cheapest = (pricing: MarketOffer["pricing"] | "renewable", kwh: number, n: number) =>
     offers
-      .filter((o) => o.pricing === pricing)
+      .filter((o) => (pricing === "renewable" ? o.origin === "renewable" : o.pricing === pricing))
       .sort((a, b) => offerYearly(a, kwh, spotAvg) - offerYearly(b, kwh, spotAvg))
       .slice(0, n)
       .map((o) => o.id);
-  return SEGMENTS.map((s) => ({ ...s, best: [...cheapest("fixed", s.annualKwh, 4), ...cheapest("spot", s.annualKwh, 2)] }));
+  return SEGMENTS.map((s) => ({ ...s, best: [
+      ...new Set([...cheapest("fixed", s.annualKwh, 4), ...cheapest("spot", s.annualKwh, 2), ...cheapest("renewable", s.annualKwh, 2)]),
+    ],
+  }));
 }
 
 export const slug = (s: string) =>

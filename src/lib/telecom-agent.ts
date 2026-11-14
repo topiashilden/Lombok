@@ -97,7 +97,8 @@ export async function* runTelecomAgent(): AsyncGenerator<AgentEvent> {
   for (const p of raw) {
     if (p.lowConfidence || !plausible(p) || !/^https?:\/\//.test(p.sourceUrl)) continue;
     const product = p.product.replace(new RegExp(`^${p.operator.split(" ")[0]}\\s+`, "i"), "") || p.product;
-    const id = slug(`${p.operator}-${product}`);
+    // One id per plan, however the page writes the speed ("200M", "200 Mbit", "200 Mbit/s").
+    const id = slug(`${p.operator}-${product.replace(/(\d+)\s*(Mbit\/s|Mbit|Mbps|M)\b/gi, "$1m")}`);
     if (byId.has(id)) continue;
     byId.set(id, {
       id,

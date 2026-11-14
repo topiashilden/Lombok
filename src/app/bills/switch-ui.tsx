@@ -228,6 +228,8 @@ export function DoneView(props: {
   perWeek: number;
   footnote: ReactNode;
   reminder?: ReactNode;
+  /** What would happen next in real use. The switch itself is simulated in the demo. */
+  steps?: { title: string; detail: string }[];
 }) {
   useEffect(() => {
     window.scrollTo({ top: 0 });
@@ -247,11 +249,41 @@ export function DoneView(props: {
         <p className="num mt-1 font-display text-[56px] leading-none font-semibold tracking-[-0.035em]">
           <CountUp from={props.remainingBefore} to={props.remainingAfter} />
         </p>
-        <p className="mt-3 inline-flex h-7 items-center rounded-full bg-mint/15 px-2.5 text-[13px] font-semibold text-mint">
-          +{eur.format(props.perWeek)} every week
-        </p>
+        {props.perWeek > 0 && (
+          <p className="mt-3 inline-flex h-7 items-center rounded-full bg-mint/15 px-2.5 text-[13px] font-semibold text-mint">
+            +{eur.format(props.perWeek)} every week
+          </p>
+        )}
         <p className="mt-4 border-t border-white/10 pt-3 text-[13px] leading-snug text-white/65">{props.footnote}</p>
       </Slab>
+
+      {props.steps && (
+        <section className="mt-4 rounded-2xl bg-card p-4 shadow-[0_1px_3px_rgba(15,42,31,0.06)]">
+          <h2 className="font-display text-[17px] font-semibold tracking-[-0.01em]">What happens next</h2>
+          <p className="mt-0.5 text-[13px] leading-snug text-muted-foreground">
+            How the switch would run in real use. In this demo it is simulated.
+          </p>
+          <ol className="mt-3 flex flex-col">
+            {props.steps.map((st, i) => (
+              <li key={st.title} className="relative flex gap-3 pb-4 last:pb-0">
+                {i < props.steps!.length - 1 && <span className="absolute top-6 bottom-0 left-[11px] w-px bg-border" aria-hidden />}
+                <span
+                  className={`num flex size-6 shrink-0 items-center justify-center rounded-full text-[12px] font-semibold ${
+                    i === 0 ? "bg-primary text-white" : "bg-muted text-muted-foreground"
+                  }`}
+                  aria-hidden
+                >
+                  {i === 0 ? <Check className="size-3.5" strokeWidth={3} /> : i + 1}
+                </span>
+                <span className="min-w-0 text-[14px] leading-snug">
+                  <span className="font-medium">{st.title}</span>
+                  <span className="block text-[13px] text-muted-foreground">{st.detail}</span>
+                </span>
+              </li>
+            ))}
+          </ol>
+        </section>
+      )}
 
       {props.reminder && (
         <div className="mt-4 flex items-start gap-3 rounded-2xl bg-card p-4 shadow-[0_1px_3px_rgba(15,42,31,0.06)]">
