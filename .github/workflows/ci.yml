@@ -1,6 +1,7 @@
 # Checks every pull request and every push to main, so a merge can't quietly break the app.
 # Steps: install, lint, build (includes the TypeScript check), then a smoke test that starts the
 # built app and checks that the main pages and API routes answer. No secrets needed.
+# Runs on CRACI (runs-on: craci), which records what every build pulls in. Needed for the CRACI challenge.
 name: CI
 
 on:
@@ -15,7 +16,7 @@ concurrency:
 jobs:
   check:
     name: Lint, build and smoke test
-    runs-on: ubuntu-latest
+    runs-on: craci
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
