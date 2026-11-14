@@ -1,3 +1,4 @@
+import { connection } from "next/server";
 import { Screen } from "@/components/solvo/screen";
 import Link from "next/link";
 import { ArrowRight, CalendarDays, MessageCircle, ReceiptText } from "lucide-react";
@@ -9,6 +10,7 @@ import { Chip, Group, IconTile, Logo, PAGE, Row, Slab, eur, primaryButton } from
 import { safeToSpend, topCategories, unknownBills } from "@/lib/coach";
 import { BASKET_LABELS, type Basket } from "@/lib/demo";
 import { scheduleFor } from "@/lib/schedule-server";
+import { todayIso } from "@/lib/demo-clock";
 import { getSource } from "@/lib/source";
 
 const dateFmt = new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
@@ -17,7 +19,9 @@ const fmtDate = (iso: string) => dateFmt.format(new Date(`${iso}T00:00:00Z`));
 const DAYS = ["M", "T", "W", "T", "F", "S", "S"];
 const BASKET_COLOR: Record<Basket, string> = { 1: "bg-chart-1", 2: "bg-chart-2", 3: "bg-chart-4" };
 
-export default function Home() {
+export default async function Home() {
+  // Render per request: these pages show dates, and the demo clock reads the real date. See src/lib/demo-clock.ts.
+  await connection();
   const { customer: c, local } = getSource();
   const s = safeToSpend(c);
   const schedule = scheduleFor(c);
@@ -26,7 +30,10 @@ export default function Home() {
   const yearTotal = baskets.reduce((sum, b) => sum + c.summary.basketYear[b], 0);
   const over = s.remaining < 0;
   const usedShare = Math.min(1, Math.max(0, s.spentThisWeek / s.weeklyBudget));
-  const today = Math.min(6, Math.max(0, 7 - s.daysLeft));
+  // The week strip follows the REAL weekday. The demo data's own "today" is a Wednesday, which would show on a Saturday.
+  const realToday = todayIso();
+  const today = (new Date(`${realToday}T00:00:00Z`).getUTCDay() + 6) % 7; // Monday = 0
+  const daysLeft = 7 - today;
 
   return (
     <Screen>
@@ -60,8 +67,8 @@ export default function Home() {
             <LiveWeeklyEuro base={s.remaining} signed />
           </p>
           <p className="mt-2 text-[15px] text-white/70">
-            of your <LiveWeeklyEuro base={s.weeklyBudget} /> weekly budget, {s.daysLeft}{" "}
-            {s.daysLeft === 1 ? "day" : "days"} left
+            of your <LiveWeeklyEuro base={s.weeklyBudget} /> weekly budget, {daysLeft}{" "}
+            {daysLeft === 1 ? "day" : "days"} left
           </p>
 
           <div className="mt-5">
@@ -90,7 +97,7 @@ export default function Home() {
           </div>
 
           <p className="mt-4 border-t border-white/10 pt-3 text-[13px] text-white/60">
-            {eur.format(s.spentThisWeek)} spent since {fmtDate(s.weekStart)}
+            {eur.format(s.spentThisWeek)} spent so far this week
           </p>
           <SwitchBoostNote className="mt-2 text-[13px] font-semibold text-mint" />
         </Slab>
@@ -99,7 +106,7 @@ export default function Home() {
 
         <PlanCard />
 
-        <UpcomingCard items={schedule.items} asOf={c.asOf} />
+        <UpcomingCard items={schedule.items} today={realToday} />
 
         {/* The bank's blind spot, and Solvo's hook */}
         <section className="mt-4 rounded-[24px] bg-card p-5 shadow-[0_1px_3px_rgba(15,42,31,0.06)]">

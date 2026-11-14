@@ -2,6 +2,7 @@ import { SAVED_READINGS } from "@/data/einvoices/saved-readings";
 import { UNPAID } from "@/data/reminders";
 import { safeToSpend } from "@/lib/coach";
 import { BASKET_LABELS, MAIN_CUSTOMER, type Basket } from "@/lib/demo";
+import { todayIso, toDemo, toShown } from "@/lib/demo-clock";
 import { compare } from "@/lib/offers";
 import { MERCHANT_TYPE_NAMES, spending, type SpendingQuery, type SpendingResult } from "@/lib/spending";
 
@@ -21,6 +22,23 @@ type Part = { text?: string; functionCall?: { name: string; args?: SpendingQuery
 type Content = { role: "user" | "model"; parts: Record<string, unknown>[] };
 
 const c = MAIN_CUSTOMER;
+
+// The demo clock (src/lib/demo-clock.ts) shows real dates. The data and the spending tool work in the demo's own dates, so the
+// model is told real dates, its dates are mapped back for the tool, and the tool's dates are mapped forward for the model.
+const realDaysLeft = () => 7 - ((new Date(`${todayIso()}T00:00:00Z`).getUTCDay() + 6) % 7);
+
+function spendingForModel(q: SpendingQuery) {
+  const raw = spending(c, { ...q, from: q.from ? toDemo(q.from) : undefined, to: q.to ? toDemo(q.to) : undefined });
+  const shown = {
+    ...raw,
+    from: toShown(raw.from),
+    to: toShown(raw.to),
+    // A demo month stands for the real month that holds its middle after the shift, so "last full month" reads as real.
+    groups: raw.groups.map((g) => (q.groupBy === "month" ? { ...g, key: toShown(`${g.key}-15`).slice(0, 7) } : g)),
+    largest: raw.largest.map((l) => ({ ...l, date: toShown(l.date) })),
+  };
+  return { raw, shown };
+}
 const CATEGORIES = Object.keys(c.basketOf).sort();
 const eur = (n: number) => `€${Math.round(n).toLocaleString("en-US")}`;
 
@@ -45,9 +63,9 @@ function customerContext() {
     .map((r) => `- ${r.supplier}, ${r.product}: ${eur(r.monthlyCost)}/month. ${r.summary}`)
     .join("\n");
 
-  return `Customer: age ${c.age}, postal code ${c.postalCode} (Espoo). Today is ${c.asOf}. Data covers ${c.transactions[0].date} to ${c.asOf}.
+  return `Customer: age ${c.age}, postal code ${c.postalCode} (Espoo). Today is ${toShown(c.asOf)}. Data covers ${toShown(c.transactions[0].date)} to ${toShown(c.asOf)}.
 
-Safe to spend this week (Monday ${s.weekStart} to Sunday): ${eur(s.remaining)} left of a ${eur(s.weeklyBudget)} weekly everyday budget, ${eur(s.spentThisWeek)} spent so far, ${s.daysLeft} days left. Built from: salary ${eur(s.incomePerMonth)}/month, minus fixed and regular bills ${eur(s.fixedRegularPerMonth)}, minus set-aside for irregular costs ${eur(s.irregularSetAsidePerMonth)}, minus savings goal ${eur(s.savingsGoalPerMonth)} (an assumption the user can change). They usually spend ${eur(s.usualWeeklyEveryday)} a week on everyday things.
+Safe to spend this week (Monday to Sunday): ${eur(s.remaining)} left of a ${eur(s.weeklyBudget)} weekly everyday budget, ${eur(s.spentThisWeek)} spent so far, ${realDaysLeft()} days left. Built from: salary ${eur(s.incomePerMonth)}/month, minus fixed and regular bills ${eur(s.fixedRegularPerMonth)}, minus set-aside for irregular costs ${eur(s.irregularSetAsidePerMonth)}, minus savings goal ${eur(s.savingsGoalPerMonth)} (an assumption the user can change). They usually spend ${eur(s.usualWeeklyEveryday)} a week on everyday things.
 
 Three baskets, last 12 months:
 ${baskets}
@@ -59,7 +77,7 @@ Bills Solvo has read from the e-invoices in the bank:
 ${bills}
 Electricity: doing nothing costs ${eur(cmp.doNothing)}/year after the rollover. Best fixed offer is ${cmp.recommended.supplier} ${cmp.recommended.product} at ${eur(cmp.recommended.yearly)}/year, saving ${eur(cmp.recommended.saving)}/year (about ${eur(cmp.recommended.saving / 52)} a week more to spend). The user can switch with one tap in the Bills view after approving.
 
-Unpaid bill: ${UNPAID.supplier}, ${eur(UNPAID.amount)} (${UNPAID.what}), was due ${UNPAID.dueDate} and is still open. It belongs to basket 2 (irregular costs), so paying it comes from the irregular set-aside and doesn't lower this week's safe-to-spend. Paying before the reminder avoids a reminder fee. If the user can't pay now, suggest calling the clinic to ask for a later due date or an instalment plan, and that an S-Pankki advisor can help. Solvo is a coach, not a debt collector.`;
+Unpaid bill: ${UNPAID.supplier}, ${eur(UNPAID.amount)} (${UNPAID.what}), was due ${toShown(UNPAID.dueDate)} and is still open. It belongs to basket 2 (irregular costs), so paying it comes from the irregular set-aside and doesn't lower this week's safe-to-spend. Paying before the reminder avoids a reminder fee. If the user can't pay now, suggest calling the clinic to ask for a later due date or an instalment plan, and that an S-Pankki advisor can help. Solvo is a coach, not a debt collector.`;
 }
 
 const SYSTEM = `You are Solvo, a friendly money coach inside the S-Pankki bank app. You talk to one customer about their own money.
@@ -155,9 +173,9 @@ async function converse(model: string, messages: ChatMessage[], key: string, sig
     contents.push({
       role: "user",
       parts: calls.map(({ functionCall }) => {
-        const result = spending(c, functionCall!.args ?? {});
-        checks.push(result);
-        return { functionResponse: { name: functionCall!.name, id: functionCall!.id, response: { result } } };
+        const { raw, shown } = spendingForModel(functionCall!.args ?? {});
+        checks.push(raw); // the screen formats these through the demo clock, so they stay in demo dates
+        return { functionResponse: { name: functionCall!.name, id: functionCall!.id, response: { result: shown } } };
       }),
     });
   }

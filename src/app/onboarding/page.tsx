@@ -1,3 +1,4 @@
+import { connection } from "next/server";
 import { inferProfile } from "@/lib/profile";
 import { scheduleFor } from "@/lib/schedule-server";
 import { getSource } from "@/lib/source";
@@ -7,7 +8,9 @@ export const metadata = { title: "Your plan · Solvo" };
 
 // Runs on the server: the transactions never reach the phone, only the profile, the usual dates and a few
 // monthly numbers.
-export default function OnboardingPage() {
+export default async function OnboardingPage() {
+  // Render per request: these pages show dates, and the demo clock reads the real date. See src/lib/demo-clock.ts.
+  await connection();
   const { customer: c, local } = getSource();
   const profile = inferProfile(c);
   const schedule = scheduleFor(c);
