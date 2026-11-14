@@ -21,8 +21,10 @@ import {
 } from "@/components/solvo/ui";
 import { UNPAID } from "@/data/reminders";
 import {
+  clearCachedReadings,
   resetDemo,
   useBillActions,
+  useCachedReadings,
   useSavingsPlan,
   useSwitches,
 } from "@/lib/switches";
@@ -41,6 +43,7 @@ export function ProfileClient(props: {
 }) {
   const switches = Object.values(useSwitches()).filter((s) => !!s);
   const plan = useSavingsPlan();
+  const readCount = Object.keys(useCachedReadings()).length;
   const bills = useBillActions();
   const paid = bills[UNPAID.id]?.action === "paid";
   const anything =
@@ -91,7 +94,11 @@ export function ProfileClient(props: {
               </IconTile>
             }
             title={`${s.fromSupplier} → ${s.toSupplier}`}
-            subtitle={s.startDate ? `Switch approved, starts ${dateFmt.format(new Date(s.startDate))}` : "Switch approved"}
+            subtitle={
+              s.startDate
+                ? `Switch approved, starts ${dateFmt.format(new Date(s.startDate))}`
+                : "Switch approved"
+            }
             value={`−${eur.format(s.yearlySaving)}`}
             valueSub="a year"
           />
@@ -166,6 +173,15 @@ export function ProfileClient(props: {
           valueSub="a month"
         />
       </Group>
+      {readCount > 0 && (
+        <button
+          type="button"
+          onClick={clearCachedReadings}
+          className="mt-2 flex min-h-11 items-center px-1 text-[13px] font-medium text-primary underline underline-offset-4"
+        >
+          Read my {readCount} e-invoices again with Gemini
+        </button>
+      )}
 
       <Group
         title="Your data"
