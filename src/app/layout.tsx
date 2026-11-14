@@ -1,9 +1,15 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Bricolage_Grotesque, Geist_Mono, Instrument_Sans } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+// Display: Bricolage Grotesque for the big money figures and page titles. Body: Instrument Sans.
+const display = Bricolage_Grotesque({
+  variable: "--font-display",
+  subsets: ["latin"],
+});
+
+const body = Instrument_Sans({
+  variable: "--font-body",
   subsets: ["latin"],
 });
 
@@ -28,7 +34,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   // Draw under the notch and home bar; pages pad with pt-safe / pb-safe.
   viewportFit: "cover",
-  themeColor: "#ffffff",
+  themeColor: "#f2f4f1",
   // Android Chrome: resize the layout when the keyboard opens. iOS Safari ignores this.
   interactiveWidget: "resizes-content",
 };
@@ -37,11 +43,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${display.variable} ${body.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-dvh">
         {/* Phone-width column. On a laptop it sits centred so judges still see the phone layout. */}
-        <div className="mx-auto flex min-h-dvh w-full max-w-[430px] flex-col bg-background md:shadow-xl md:ring-1 md:ring-border">
+        <div className="mx-auto flex min-h-dvh w-full max-w-[430px] flex-col bg-background md:shadow-2xl md:shadow-black/10">
           {children}
         </div>
       </body>
