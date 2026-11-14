@@ -150,6 +150,25 @@ export function inferSchedule(c: DemoCustomer, named: NamedBill[] = []): Schedul
       items.push({ id: `ins-${i}`, label: "Insurance", kind: "out", day: Math.round(median(rs.map((t) => dayOf(t.date)))), amount: Math.round(median(rs.map((t) => -t.amount))), source: "detected", detail: m }),
     );
 
+  // A side income that lands at another bank: a recurring "Side income" payment.
+  const side = rows.filter((t) => t.category === "Side income" && t.amount > 0);
+  if (new Set(side.map((t) => monthOf(t.date))).size >= 3) {
+    items.push({ id: "side-income", label: "Side income", kind: "in", day: Math.round(median(side.map((t) => dayOf(t.date)))), amount: Math.round(median(monthlySums(side))), source: "detected", detail: side[0].merchant ?? undefined });
+  }
+
+  // Subscriptions and memberships: a named payee charged the same amount about once a month for at least six months.
+  const SKIP = new Set(["Utilities", "Housing", "Groceries", "Restaurants", "Transfer", "Invest Deposit", "Salary", "Side income"]);
+  const payees: Record<string, typeof rows> = {};
+  for (const t of rows) if (t.amount < 0 && t.merchant && t.merchant !== "Person" && !SKIP.has(t.category) && !billType(t.merchant)) (payees[t.merchant] ??= []).push(t);
+  Object.entries(payees).forEach(([m, rs], i) => {
+    const months = new Set(rs.map((t) => monthOf(t.date))).size;
+    const amounts = rs.map((t) => -t.amount);
+    const steady = Math.max(...amounts) - Math.min(...amounts) <= Math.max(...amounts) * 0.02;
+    if (months >= 6 && rs.length <= months * 1.2 && steady) {
+      items.push({ id: `sub-${i}`, label: m, kind: "out", day: Math.round(median(rs.map((t) => dayOf(t.date)))), amount: Math.round(median(amounts)), source: "detected", detail: rs[0].category });
+    }
+  });
+
   items.sort((a, b) => (a.kind === b.kind ? a.day - b.day : a.kind === "in" ? -1 : 1));
   return { payday, items };
 }

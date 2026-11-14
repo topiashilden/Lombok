@@ -16,7 +16,7 @@ const OUT = "data/private/nordea-customer.json";
 // Same baskets as scripts/build-demo-data.mjs, plus the extra categories real data needs.
 //  1 = fixed and regular, 2 = fixed and irregular, 3 = everyday. Not listed = not spending (income, own transfers, investing).
 const BASKET = {
-  Housing: 1, Utilities: 1,
+  Housing: 1, Utilities: 1, Subscriptions: 1, Insurance: 1,
   Health: 2, "Home & Tech": 2, Travel: 2,
   Groceries: 3, Restaurants: 3, Transportation: 3, Entertainment: 3, Lifestyle: 3,
   P2P: 3, Cash: 3, "Card bill": 3, Other: 3,
@@ -29,7 +29,10 @@ const RULES = [
   ["Groceries", /S MARKET|K MARKET|K SUPERMARKET|K CITYMARKET|LIDL|ALEPA|PRISMA|SALE |TOKMANNI|KAUPPAHALLI/],
   ["Restaurants", /WOLT|FOODORA|HESBURGER|MCD|MCDONALD|RESQ|SUBWAY|KOTIPIZZA|BURGER|RAVINTOLA|RESTAURANT|CAFE|KAHVI|COFFEE|COMPASS|YLVA|SODEXO|FAZER|ESPRESSO|STARBUCKS|BAGEL|PIZZA|SUSHI|KEBAB|BAR /],
   ["Transportation", /BOLT|UBER|HSL|HELSINGIN SEUD|SEUDUN|\bVR\b|CITYBIKE|VÄRE|VARE OY|TAXI|TAKSI|NESTE|\bST1\b|\bABC\b|SHELL|PARKKI|PARKING|LIME/],
-  ["Entertainment", /SPOTIFY|NETFLIX|HBO|YOUTUBE|DISNEY|TIKETTI|LIPUTON|APPLE COM|STEAM|FINNKINO|CINEMA|TWITCH|PLAYSTATION|NINTENDO/],
+  // Recurring subscriptions are their own bracket (fixed and regular), apart from one-off entertainment.
+  ["Subscriptions", /SPOTIFY|NETFLIX|HBO|YOUTUBE|DISNEY|APPLE COM|ICLOUD|PRIME VIDEO|TWITCH|PLAYSTATION|NINTENDO|STORYTEL|BOOKBEAT/],
+  ["Insurance", /VAKUUTUS|INSURANCE|TAPIOLA|FENNIA|POHJOLA|\bIF\b/],
+  ["Entertainment", /TIKETTI|LIPUTON|STEAM|FINNKINO|CINEMA/],
   ["Health", /APTEEKKI|APOTEK|SATS|FYSIO|LÄÄKÄRI|TERVEYS|HAMMAS|MEHILÄINEN|TERVEYSTALO|OPTIIKKA|SPECSAVERS/],
   ["Home & Tech", /CLAS OHLSON|VERKKOKAUPPA|JIMMS|ELKJØP|GIGANTTI|IKEA|JYSK|PAYPAL|AMAZON|APPLE STORE|ELKO/],
   ["Travel", /TRIP COM|BOOKING|AIRBNB|FINNAIR|RYANAIR|HOTEL|ECPAY|CTBC|TAISHIN|ROOM ABROAD|KLOOK|HOSTEL|AIRLINES|EASYJET/],
